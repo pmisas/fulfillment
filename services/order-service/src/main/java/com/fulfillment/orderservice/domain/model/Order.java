@@ -15,7 +15,8 @@ public class Order {
     private final Instant updateAt;
     
 
-    private Order(UUID orderId,
+    private Order(
+            UUID orderId,
             String werehouse,
             String customerId,
             int total_items,
