@@ -1,6 +1,6 @@
 package com.fulfillment.orderservice.domain.model;
 
-import java.util.Objects;
+import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
 
 public class OrderItem {
     
@@ -26,10 +26,4 @@ public class OrderItem {
         return this.quantity;
     }
 
-    private static String requireNonBlank(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(field + " no puede estar en blanco");
-        }
-        return value;
-    }
 }

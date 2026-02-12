@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
+
 public class Order {
 
     private final UUID orderId;
@@ -26,7 +28,7 @@ public class Order {
         this.orderId = orderId;
         this.werehouse = requireNonBlank(werehouse, "werehouse");
         this.customerId = requireNonBlank(customerId, "customer_id");
-        this.totalItems = Objects.requireNonNull(total_items);
+        this.totalItems = total_items;
         this.status = Objects.requireNonNull(status);
         this.createdAt = Objects.requireNonNull(createdAt);
         this.updateAt = Objects.requireNonNull(updateAt);
@@ -87,13 +89,6 @@ public class Order {
 
     public Instant getUpdatedAt() {
         return updateAt;
-    }
-
-    private static String requireNonBlank(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(field + " no puede estar en blanco");
-        }
-        return value;
     }
 
 }
