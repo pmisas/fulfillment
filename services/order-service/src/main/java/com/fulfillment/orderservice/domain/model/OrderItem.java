@@ -14,7 +14,7 @@ public class OrderItem {
         this.quantity = quantity;
     }
 
-    public OrderItem createOrderItem(String sku, int quantity) {
+    public static OrderItem createOrderItem(String sku, int quantity) {
         return new OrderItem(sku, quantity);
     }
 

@@ -8,7 +8,7 @@ import static com.fulfillment.orderservice.domain.shared.DomainValidations.requi
 
 public class Order {
 
-    private final UUID orderId;
+    private final String orderId;
     private final String werehouse;
     private final String customerId;
     private final int totalItems;
@@ -18,7 +18,7 @@ public class Order {
     
 
     private Order(
-            UUID orderId,
+            String orderId,
             String werehouse,
             String customerId,
             int total_items,
@@ -40,7 +40,7 @@ public class Order {
                 int totalItems) {
     Instant now = Instant.now();
     return new Order(
-        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
         werehouse, 
         customer_id, 
         totalItems, 
@@ -63,7 +63,7 @@ public class Order {
     }
 
     
-    public UUID getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
 
