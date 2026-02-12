@@ -1,0 +1,13 @@
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# VS COde
+.vscode/
+
+# Windows
+Thumbs.db
