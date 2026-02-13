@@ -66,7 +66,7 @@ Retorna una orden por id.
 ## Estado del proyecto
 
  - [x] Esqueleto Spring Boot creado
- - [ ] Endpoints implementados
+ - [x] Endpoints implementados
  - [ ] DynamoDB integración
  - [ ] Redis idempotencia
  - [ ] Deploy en ECS Fargate

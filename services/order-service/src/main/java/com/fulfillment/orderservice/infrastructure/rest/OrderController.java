@@ -1,19 +1,24 @@
-package com.fulfillment.orderservice.infraestructure.rest;
+package com.fulfillment.orderservice.infrastructure.rest;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.orderservice.application.OrderService;
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.model.Order;
-import com.fulfillment.orderservice.infraestructure.rest.dto.CreateOrderRequest;
-import com.fulfillment.orderservice.infraestructure.rest.dto.OrderResponse;
+import com.fulfillment.orderservice.infrastructure.rest.dto.CreateOrderRequest;
+import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
 
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 
 @RestController
@@ -26,7 +31,8 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @PostMapping("/")
+    @PostMapping()
+    @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest req,
                 @RequestHeader(value = "Idempotency-Key", required = false) 
                 String idempotencyKey) {
@@ -36,5 +42,13 @@ public class OrderController {
         
         return OrderRestMapper.toResponse(order);
     }
+
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public OrderResponse getOrderById(@PathVariable("id")String id) {
+        Order order = orderService.getById(id);
+        return OrderRestMapper.toResponse(order);
+    }
+    
     
 }

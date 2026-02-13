@@ -2,12 +2,15 @@ package com.fulfillment.orderservice.application;
 
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.port.OrderRepository;
 import com.fulfillment.orderservice.domain.model.OrderItem;
 
+@Service
 public class OrderServiceImpl implements OrderService {
     
     private final OrderRepository repo;

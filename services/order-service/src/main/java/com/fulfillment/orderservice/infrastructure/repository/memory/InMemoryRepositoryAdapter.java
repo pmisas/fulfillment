@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.infraestructure.repository.memory;
+package com.fulfillment.orderservice.infrastructure.repository.memory;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;

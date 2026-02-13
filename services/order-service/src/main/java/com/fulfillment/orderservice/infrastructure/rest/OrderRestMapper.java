@@ -1,9 +1,9 @@
-package com.fulfillment.orderservice.infraestructure.rest;
+package com.fulfillment.orderservice.infrastructure.rest;
 
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.model.Order;
-import com.fulfillment.orderservice.infraestructure.rest.dto.CreateOrderRequest;
-import com.fulfillment.orderservice.infraestructure.rest.dto.OrderResponse;
+import com.fulfillment.orderservice.infrastructure.rest.dto.CreateOrderRequest;
+import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
 
 public final class OrderRestMapper {
     
