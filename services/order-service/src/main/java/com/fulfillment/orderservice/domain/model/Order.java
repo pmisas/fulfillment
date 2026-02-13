@@ -11,7 +11,6 @@ public class Order {
     private final String orderId;
     private final String werehouse;
     private final String customerId;
-    private final int totalItems;
     private final Status status;
     private final Instant createdAt;
     private final Instant updateAt;
@@ -21,14 +20,12 @@ public class Order {
             String orderId,
             String werehouse,
             String customerId,
-            int total_items,
             Status status,
             Instant createdAt,
             Instant updateAt) {
         this.orderId = orderId;
         this.werehouse = requireNonBlank(werehouse, "werehouse");
         this.customerId = requireNonBlank(customerId, "customer_id");
-        this.totalItems = total_items;
         this.status = Objects.requireNonNull(status);
         this.createdAt = Objects.requireNonNull(createdAt);
         this.updateAt = Objects.requireNonNull(updateAt);
@@ -36,14 +33,12 @@ public class Order {
 
     public static Order createOrder(
                 String werehouse,
-                String customer_id,
-                int totalItems) {
+                String customer_id) {
     Instant now = Instant.now();
     return new Order(
         UUID.randomUUID().toString(),
         werehouse, 
-        customer_id, 
-        totalItems, 
+        customer_id,
         Status.CREATED,
         now,
         now
@@ -55,7 +50,6 @@ public class Order {
             this.orderId,
             this.werehouse,
             this.customerId,
-            this.totalItems,
             Objects.requireNonNull(newStatus),
             this.createdAt,
             Instant.now()
@@ -73,10 +67,6 @@ public class Order {
 
     public String getCustomerId() {
         return customerId;
-    }
-
-    public int getTotalItems() {
-        return totalItems;
     }
 
     public Status getStatus() {
