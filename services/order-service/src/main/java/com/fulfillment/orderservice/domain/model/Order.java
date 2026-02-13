@@ -1,6 +1,7 @@
 package com.fulfillment.orderservice.domain.model;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,6 +15,7 @@ public class Order {
     private final Status status;
     private final Instant createdAt;
     private final Instant updateAt;
+    private final List<OrderItem> items;
     
 
     private Order(
@@ -22,18 +24,24 @@ public class Order {
             String customerId,
             Status status,
             Instant createdAt,
-            Instant updateAt) {
+            Instant updateAt,
+            List<OrderItem> items) {
         this.orderId = orderId;
         this.werehouse = requireNonBlank(werehouse, "werehouse");
         this.customerId = requireNonBlank(customerId, "customer_id");
         this.status = Objects.requireNonNull(status);
         this.createdAt = Objects.requireNonNull(createdAt);
         this.updateAt = Objects.requireNonNull(updateAt);
+        this.items = List.copyOf(Objects.requireNonNull(items));
+        if (this.items.isEmpty()) {
+            throw new IllegalArgumentException("items must not be empty");
+        }
     }
 
     public static Order createOrder(
                 String werehouse,
-                String customer_id) {
+                String customer_id,
+                List<OrderItem> items) {
     Instant now = Instant.now();
     return new Order(
         UUID.randomUUID().toString(),
@@ -41,7 +49,8 @@ public class Order {
         customer_id,
         Status.CREATED,
         now,
-        now
+        now,
+        items
         );
     }
 
@@ -52,7 +61,8 @@ public class Order {
             this.customerId,
             Objects.requireNonNull(newStatus),
             this.createdAt,
-            Instant.now()
+            Instant.now(),
+            this.items
         );
     }
 
@@ -79,6 +89,10 @@ public class Order {
 
     public Instant getUpdatedAt() {
         return updateAt;
+    }
+
+    public List<OrderItem> getItems() {
+        return items;
     }
 
 }

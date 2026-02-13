@@ -1,9 +1,12 @@
 package com.fulfillment.orderservice.application;
 
+import java.util.List;
+
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.port.OrderRepository;
+import com.fulfillment.orderservice.domain.model.OrderItem;
 
 public class OrderServiceImpl implements OrderService {
     
@@ -17,8 +20,11 @@ public class OrderServiceImpl implements OrderService {
     public Order create(CreateOrderCommand command, String idempotencyKey) {
         //comprobar que existe werehouse
         //comprobar idempotencia
-        
-        Order order = Order.createOrder("123werehouse" , command.customerId());
+        List<OrderItem> items = command.items().stream()
+                        .map(i -> OrderItem.createOrderItem(i.sku(), i.quantity()))
+                        .toList();
+
+        Order order = Order.createOrder("123werehouse" , command.customerId(), items);
         repo.save(order);
         return order;
     }
