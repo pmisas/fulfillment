@@ -9,6 +9,6 @@ public interface WarehouseRepository {
 
     Warehouse save(Warehouse warehouse);
     Optional<Warehouse> findById(String warehouseId);
-    List<Warehouse> findall();
+    List<Warehouse> findAll();
     
 }

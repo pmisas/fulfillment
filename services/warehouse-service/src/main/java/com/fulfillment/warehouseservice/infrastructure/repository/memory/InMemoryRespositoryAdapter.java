@@ -25,7 +25,7 @@ public class InMemoryRespositoryAdapter implements WarehouseRepository {
     }
 
     @Override
-    public List<Warehouse> findall(){
+    public List<Warehouse> findAll(){
         return new ArrayList<>(db.values());
     }
 }
