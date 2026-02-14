@@ -28,4 +28,12 @@ public class InMemoryRespositoryAdapter implements WarehouseRepository {
     public List<Warehouse> findAll(){
         return new ArrayList<>(db.values());
     }
+
+    @Override
+    public Optional<Warehouse> findByCity(String city) {
+        return db.values()
+             .stream()
+             .filter(w -> w.getCity().equalsIgnoreCase(city))
+             .findFirst();
+    }
 }

@@ -2,6 +2,7 @@ package com.fulfillment.warehouseservice.application;
 
 import java.util.List;
 
+import com.fulfillment.warehouseservice.domain.exception.WarehouseAlreadyExistsException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.WarehouseRepository;
@@ -16,7 +17,11 @@ public class WarehouseServiceImpl implements WarehouseService{
 
     @Override
     public Warehouse create(Warehouse warehouse) {
-        // validar que la ciudad sea unica
+        this.repo.findByCity(warehouse.getCity())
+            .ifPresent(w ->
+                {throw new WarehouseAlreadyExistsException(warehouse.getCity());
+            });
+
         return this.repo.save(warehouse);
     }
 

@@ -10,5 +10,5 @@ public interface WarehouseRepository {
     Warehouse save(Warehouse warehouse);
     Optional<Warehouse> findById(String warehouseId);
     List<Warehouse> findAll();
-    
+    Optional<Warehouse> findByCity(String city);
 }
