@@ -10,11 +10,11 @@ public class WarehouseResponse {
         this.city = city;
     }
 
-    public String warehouseId() {
+    public String getWarehouseId() {
         return warehouseId;
     }
 
-    public String city() {
+    public String getCity() {
         return city;
     }
     
