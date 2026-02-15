@@ -11,11 +11,11 @@ public final class OrderRestMapper {
 
     public static CreateOrderCommand toCommand(CreateOrderRequest req){
         return new CreateOrderCommand(
-            req.getCustomerId(),
-            req.getItems().stream()
+            req.customerId(),
+            req.items().stream()
                     .map(item -> new CreateOrderCommand.Item(
-                item.getSku(),
-                item.getQuantity()
+                item.sku(),
+                item.quantity()
             ))
             .toList()
         );
