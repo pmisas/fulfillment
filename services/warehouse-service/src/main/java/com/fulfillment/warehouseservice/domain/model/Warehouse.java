@@ -21,8 +21,7 @@ public class Warehouse {
     }
 
     public static Warehouse createWarehouse(
-                    String city,
-                    Instant createdAt) {
+                    String city) {
         Instant now = Instant.now();
         return new Warehouse(
             UUID.randomUUID().toString(), 
