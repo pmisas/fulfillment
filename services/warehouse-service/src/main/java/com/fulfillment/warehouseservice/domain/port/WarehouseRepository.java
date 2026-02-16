@@ -11,4 +11,5 @@ public interface WarehouseRepository {
     Optional<Warehouse> findById(String warehouseId);
     List<Warehouse> findAll();
     Optional<Warehouse> findByCity(String city);
+    boolean existsAny();
 }

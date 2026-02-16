@@ -10,4 +10,5 @@ public interface WarehouseService {
     Warehouse create(CreateWarehouseCommand command);
     Warehouse getById(String id);
     List<Warehouse> getAll();
+    boolean existsAny();
 }
