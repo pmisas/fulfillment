@@ -29,6 +29,14 @@ public class Warehouse {
             now);
     }
 
+    public static Warehouse restore(
+            String warehouseId,
+            String city,
+            Instant createdAt
+    ) {
+        return new Warehouse(warehouseId, city, createdAt);
+    }
+
     public String getWarehouseId() {
         return this.warehouseId;
     }
@@ -37,7 +45,7 @@ public class Warehouse {
         return this.city;
     }
 
-    public Instant getreatedAt() {
+    public Instant getCreatedAt() {
         return this.createdAt;
     }
 }

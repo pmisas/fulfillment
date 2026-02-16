@@ -10,28 +10,28 @@ import static com.fulfillment.orderservice.domain.shared.DomainValidations.requi
 public class Order {
 
     private final String orderId;
-    private final String werehouse;
+    private final String werehouseId;
     private final String customerId;
     private final Status status;
     private final Instant createdAt;
-    private final Instant updateAt;
+    private final Instant updatedAt;
     private final List<OrderItem> items;
     
 
     private Order(
             String orderId,
-            String werehouse,
+            String werehouseId,
             String customerId,
             Status status,
             Instant createdAt,
-            Instant updateAt,
+            Instant updatedAt,
             List<OrderItem> items) {
         this.orderId = orderId;
-        this.werehouse = requireNonBlank(werehouse, "werehouse");
+        this.werehouseId = requireNonBlank(werehouseId, "werehouse");
         this.customerId = requireNonBlank(customerId, "customer_id");
         this.status = Objects.requireNonNull(status);
         this.createdAt = Objects.requireNonNull(createdAt);
-        this.updateAt = Objects.requireNonNull(updateAt);
+        this.updatedAt = Objects.requireNonNull(updatedAt);
         this.items = List.copyOf(Objects.requireNonNull(items));
         if (this.items.isEmpty()) {
             throw new IllegalArgumentException("items must not be empty");
@@ -39,13 +39,13 @@ public class Order {
     }
 
     public static Order createOrder(
-                String werehouse,
+                String werehouseId,
                 String customer_id,
                 List<OrderItem> items) {
     Instant now = Instant.now();
     return new Order(
         UUID.randomUUID().toString(),
-        werehouse, 
+        werehouseId, 
         customer_id,
         Status.CREATED,
         now,
@@ -57,7 +57,7 @@ public class Order {
     public Order withStatus(Status newStatus) {
         return new Order(
             this.orderId,
-            this.werehouse,
+            this.werehouseId,
             this.customerId,
             Objects.requireNonNull(newStatus),
             this.createdAt,
@@ -66,13 +66,26 @@ public class Order {
         );
     }
 
+    public static Order restore(
+            String orderId,
+            String werehouseId,
+            String customerId,
+            Status status,
+            Instant createdAt,
+            Instant updatedAt,
+            List<OrderItem> items
+    ) {
+        return new Order(
+            orderId, werehouseId, customerId, status, createdAt, updatedAt, items);
+    }
+
     
     public String getOrderId() {
         return orderId;
     }
 
-    public String getWerehouse() {
-        return werehouse;
+    public String getWerehouseId() {
+        return werehouseId;
     }
 
     public String getCustomerId() {
@@ -88,7 +101,7 @@ public class Order {
     }
 
     public Instant getUpdatedAt() {
-        return updateAt;
+        return updatedAt;
     }
 
     public List<OrderItem> getItems() {
