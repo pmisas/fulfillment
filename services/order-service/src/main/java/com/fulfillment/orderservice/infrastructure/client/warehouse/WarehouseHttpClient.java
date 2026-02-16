@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.infrastructure.rest.client;
+package com.fulfillment.orderservice.infrastructure.client.warehouse;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;

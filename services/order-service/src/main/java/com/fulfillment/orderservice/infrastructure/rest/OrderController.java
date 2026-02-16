@@ -34,7 +34,7 @@ public class OrderController {
     @PostMapping()
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest req,
-                @RequestHeader(value = "Idempotency-Key", required = false) 
+                @RequestHeader(value = "Idempotency-Key") 
                 String idempotencyKey) {
 
         CreateOrderCommand command = OrderRestMapper.toCommand(req);
