@@ -42,4 +42,9 @@ public class WarehouseServiceImpl implements WarehouseService{
         return this.repo.findAll();
     }
 
+    @Override 
+    public boolean existsAny() {
+        return this.repo.existsAny();
+    }
+
 }

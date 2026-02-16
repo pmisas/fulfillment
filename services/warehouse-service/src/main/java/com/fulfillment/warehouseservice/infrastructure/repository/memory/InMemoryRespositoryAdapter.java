@@ -39,4 +39,9 @@ public class InMemoryRespositoryAdapter implements WarehouseRepository {
              .filter(w -> w.getCity().equalsIgnoreCase(city))
              .findFirst();
     }
+
+    @Override
+    public boolean existsAny() {
+        return !db.isEmpty();
+    }
 }

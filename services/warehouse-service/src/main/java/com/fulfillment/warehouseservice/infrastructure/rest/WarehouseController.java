@@ -3,6 +3,7 @@ package com.fulfillment.warehouseservice.infrastructure.rest;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +21,7 @@ import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseRespons
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/warehouses")
+@RequestMapping("/api/v1/warehouses")
 public class WarehouseController {
     
     private final WarehouseService warehouseService;
@@ -51,6 +52,15 @@ public class WarehouseController {
         return warehouseService.getAll().stream()
                 .map(WarehouseRestMapper::toResponse)
                 .toList();
+    }
+
+    @GetMapping("/exists")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<Void> existsAny() {
+        if (warehouseService.existsAny()) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.noContent().build();
     }
 
 }
