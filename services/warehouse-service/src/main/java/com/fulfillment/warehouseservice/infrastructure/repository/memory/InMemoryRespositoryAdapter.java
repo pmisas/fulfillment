@@ -6,12 +6,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.WarehouseRepository;
 
 @Repository
+@Profile("local")
 public class InMemoryRespositoryAdapter implements WarehouseRepository {
     
     private final ConcurrentMap<String, Warehouse> db = new ConcurrentHashMap<>();
