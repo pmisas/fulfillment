@@ -62,7 +62,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.createOrder("123werehouse" , command.customerId(), items);
         orderRepo.save(order);
-        historyRepo.append(OrderStateHistory.createOrderStateHistory(order.getOrderId(), null, order.getStatus()));
+        historyRepo.append(OrderStateHistory.createOrderStateHistory(order.getOrderId()));
 
         boolean stored = idempotencyStore.putIfAbsent(normalizedKey, order.getOrderId(), IDEMPOTENCY_TTL);
 
