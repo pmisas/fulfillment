@@ -24,14 +24,27 @@ public class OrderStateHistory {
     ) {
         this.historyId = requireNonBlank(historyId, "historyId");
         this.orderId = requireNonBlank(orderId, "orderId");
-        this.fromStatus = Objects.requireNonNull(fromStatus, "fromStatus");
+        this.fromStatus = fromStatus;
         this.toStatus = Objects.requireNonNull(toStatus, "toStatus");
         this.changedAt = Objects.requireNonNull(changedAt, "changedAt");
     }
 
     public static OrderStateHistory createOrderStateHistory(
+                    String orderId
+        ) {
+        Instant now = Instant.now();
+        return new OrderStateHistory(
+            UUID.randomUUID().toString(),
+            orderId,
+            null,
+            Status.CREATED,
+            now
+        );
+    }
+
+    public static OrderStateHistory transitionOrderStateHistory(
                     String orderId,
-                    Status fromStatus, 
+                    Status fromStatus,
                     Status toStatus
         ) {
         Instant now = Instant.now();
