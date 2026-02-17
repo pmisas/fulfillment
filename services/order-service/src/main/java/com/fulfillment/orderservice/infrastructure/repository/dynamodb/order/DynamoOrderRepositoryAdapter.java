@@ -22,7 +22,7 @@ public class DynamoOrderRepositoryAdapter implements OrderRepository{
 
     public DynamoOrderRepositoryAdapter(
                 DynamoDbEnhancedClient enhancedClient,
-                @Value("${aws.dynamodb.table}") String tableName) {
+                @Value("${aws.dynamodb.orders-table}") String tableName) {
         this.table = enhancedClient.table(tableName, 
             TableSchema.fromBean(OrderEntity.class));
     }
