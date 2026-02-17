@@ -12,25 +12,30 @@ import com.fulfillment.orderservice.domain.exception.WarehouseNotAvailableExcept
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.port.IdempotencyStore;
 import com.fulfillment.orderservice.domain.port.OrderRepository;
+import com.fulfillment.orderservice.domain.port.OrderStateHistoryRepository;
 import com.fulfillment.orderservice.domain.port.WarehouseClient;
 import com.fulfillment.orderservice.domain.model.OrderItem;
+import com.fulfillment.orderservice.domain.model.OrderStateHistory;
 
 @Service
 public class OrderServiceImpl implements OrderService {
     
     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
 
-    private final OrderRepository repo;
+    private final OrderRepository orderRepo;
     private final WarehouseClient warehouseClient;
     private final IdempotencyStore idempotencyStore;
+    private final OrderStateHistoryRepository historyRepo;
 
     public OrderServiceImpl(
-            OrderRepository repo, 
+            OrderRepository orderRepo, 
             WarehouseClient warehouseClient, 
-            IdempotencyStore idempotencyStore) {
-        this.repo = repo;
+            IdempotencyStore idempotencyStore,
+            OrderStateHistoryRepository historyRepo) {
+        this.orderRepo = orderRepo;
         this.warehouseClient = warehouseClient;
         this.idempotencyStore = idempotencyStore;
+        this.historyRepo = historyRepo;
     }
 
     @Override
@@ -46,7 +51,7 @@ public class OrderServiceImpl implements OrderService {
 
         if (existingOrderId.isPresent()) {
             String orderId = existingOrderId.get();
-            return repo.findById(orderId)
+            return orderRepo.findById(orderId)
                         .orElseThrow(() -> new 
                     IdempotencyInconsistentStateException(normalizedKey, orderId));
         }
@@ -56,14 +61,15 @@ public class OrderServiceImpl implements OrderService {
                         .toList();
 
         Order order = Order.createOrder("123werehouse" , command.customerId(), items);
-        repo.save(order);
+        orderRepo.save(order);
+        historyRepo.append(OrderStateHistory.createOrderStateHistory(order.getOrderId(), null, order.getStatus()));
 
         boolean stored = idempotencyStore.putIfAbsent(normalizedKey, order.getOrderId(), IDEMPOTENCY_TTL);
 
         if(!stored) {
             String winnerId = idempotencyStore.getOrderId(normalizedKey)
                         .orElse(order.getOrderId());
-            return repo.findById(winnerId).orElse(order);
+            return orderRepo.findById(winnerId).orElse(order);
         }
 
         return order;
@@ -71,6 +77,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order getById(String orderId) {
-        return repo.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+        return orderRepo.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
     };
 }

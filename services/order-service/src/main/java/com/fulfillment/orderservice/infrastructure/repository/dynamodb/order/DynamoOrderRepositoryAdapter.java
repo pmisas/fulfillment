@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.infrastructure.repository.dynamodb;
+package com.fulfillment.orderservice.infrastructure.repository.dynamodb.order;
 
 import java.util.Optional;
 
@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderItem;
-import com.fulfillment.orderservice.domain.model.Status;
 import com.fulfillment.orderservice.domain.port.OrderRepository;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -17,11 +16,11 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
 @Profile("cloud")
-public class DynamoRepositoryAdapter implements OrderRepository{
+public class DynamoOrderRepositoryAdapter implements OrderRepository{
     
     private final DynamoDbTable<OrderEntity> table;
 
-    public DynamoRepositoryAdapter(
+    public DynamoOrderRepositoryAdapter(
                 DynamoDbEnhancedClient enhancedClient,
                 @Value("${aws.dynamodb.table}") String tableName) {
         this.table = enhancedClient.table(tableName, 
@@ -46,7 +45,7 @@ public class DynamoRepositoryAdapter implements OrderRepository{
         e.setOrderId(order.getOrderId());
         e.setCustomerId(order.getCustomerId());
         e.setWarehouseId(order.getWerehouseId());
-        e.setStatus(order.getStatus().name());
+        e.setStatus(order.getStatus());
         e.setCreatedAt(order.getCreatedAt());
         e.setUpdatedAt(order.getUpdatedAt());
 
@@ -70,7 +69,7 @@ public class DynamoRepositoryAdapter implements OrderRepository{
             e.getOrderId(),
             e.getWarehouseId(),
             e.getCustomerId(),
-            Status.valueOf(e.getStatus()),
+            e.getStatus(),
             e.getCreatedAt(),
             e.getUpdatedAt(),
             items
