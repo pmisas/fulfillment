@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import com.fulfillment.orderservice.domain.port.IdempotencyStore;
 
 @Component
-@Profile("redis")
+@Profile("cloud")
 public class RedisIdempotencyStore implements IdempotencyStore {
 
     private final StringRedisTemplate redis;

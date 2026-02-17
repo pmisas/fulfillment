@@ -16,7 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
-@Profile("dynamo")
+@Profile("cloud")
 public class DynamoRepositoryAdapter implements OrderRepository{
     
     private final DynamoDbTable<OrderEntity> table;
