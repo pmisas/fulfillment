@@ -22,7 +22,7 @@ public class DynamoStateHistoryRepositoryAdapter implements OrderStateHistoryRep
 
     public DynamoStateHistoryRepositoryAdapter(
                 DynamoDbEnhancedClient enhancedClient,
-                @Value("${aws.dynamodb.table}") String tableName) {
+                @Value("${aws.dynamodb.history-table}") String tableName) {
         this.table = enhancedClient.table(tableName, 
             TableSchema.fromBean(OrderStateHistoryEntity.class));
     }
