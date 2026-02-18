@@ -40,13 +40,13 @@ public class Order {
 
     public static Order createOrder(
                 String werehouseId,
-                String customer_id,
+                String customerId,
                 List<OrderItem> items) {
     Instant now = Instant.now();
     return new Order(
         UUID.randomUUID().toString(),
         werehouseId, 
-        customer_id,
+        customerId,
         Status.CREATED,
         now,
         now,
