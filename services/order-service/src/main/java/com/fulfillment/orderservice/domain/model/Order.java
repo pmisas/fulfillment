@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
+
 import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
 
 public class Order {
@@ -55,6 +57,9 @@ public class Order {
     }
 
     public Order withStatus(Status newStatus) {
+        if (!this.status.canTransitionTo(newStatus)) {
+            throw new InvalidStatusTransitionException(this.status, newStatus);
+        }
         return new Order(
             this.orderId,
             this.werehouseId,
