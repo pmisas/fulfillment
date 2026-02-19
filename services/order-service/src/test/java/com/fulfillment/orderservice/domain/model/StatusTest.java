@@ -1,11 +1,9 @@
-package com.fulfillment.orderservice.domain;
+package com.fulfillment.orderservice.domain.model;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-
-import com.fulfillment.orderservice.domain.model.Status;
 
 public class StatusTest {
     
