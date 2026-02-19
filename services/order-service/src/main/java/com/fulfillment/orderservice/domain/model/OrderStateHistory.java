@@ -48,6 +48,10 @@ public class OrderStateHistory {
                     Status toStatus
         ) {
         Instant now = Instant.now();
+        Objects.requireNonNull(fromStatus, "fromStatus");
+        if (fromStatus == toStatus) { throw new 
+            IllegalArgumentException("fromStatus and toStatus must be different");
+        }
         return new OrderStateHistory(
             UUID.randomUUID().toString(),
             orderId,
@@ -64,7 +68,13 @@ public class OrderStateHistory {
                 Status toStatus,
                 Instant changedAt
     ) {
-        return new OrderStateHistory(historyId, orderId, fromStatus, toStatus, changedAt);
+        return new OrderStateHistory(
+            historyId, 
+            orderId, 
+            fromStatus, 
+            toStatus, 
+            changedAt
+        );
     }
 
     public String getHistoryId() {
