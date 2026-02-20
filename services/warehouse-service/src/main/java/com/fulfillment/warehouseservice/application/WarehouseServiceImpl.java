@@ -32,9 +32,9 @@ public class WarehouseServiceImpl implements WarehouseService{
     }
 
     @Override
-    public Warehouse getById(String id) {
-        return this.repo.findById(id)
-        .orElseThrow(() -> new WarehouseNotFoundException(id));
+    public Warehouse getById(String warehouseId) {
+        return this.repo.findById(warehouseId)
+        .orElseThrow(() -> new WarehouseNotFoundException(warehouseId));
     }
 
     @Override
@@ -45,6 +45,11 @@ public class WarehouseServiceImpl implements WarehouseService{
     @Override 
     public boolean existsAny() {
         return this.repo.existsAny();
+    }
+
+    @Override 
+    public boolean existsById(String warehouseId) {
+        return this.repo.existsById(warehouseId);
     }
 
 }

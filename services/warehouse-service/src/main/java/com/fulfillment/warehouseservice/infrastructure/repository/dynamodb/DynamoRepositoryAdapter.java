@@ -68,6 +68,15 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
             .isPresent();
     }
 
+    @Override
+    public boolean existsById(String warehouseId) {
+        WarehouseEntity entity = table.getItem(
+            r -> r.key(k -> k.partitionValue(warehouseId))
+        );
+        return entity != null;
+    }
+
+
     private WarehouseEntity toEntity(Warehouse warehouse) {
         WarehouseEntity e = new WarehouseEntity();
         e.setWarehouseId(warehouse.getWarehouseId());
