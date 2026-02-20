@@ -2,8 +2,10 @@ package com.fulfillment.inventoryservice.infraestrcture.rest;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
 import com.fulfillment.inventoryservice.application.dto.InventoryCommand;
@@ -29,6 +31,7 @@ public class InventoryItemsController {
     }
 
     @PostMapping("warehouses/{warehouseId}/inventory/{sku}/consume")
+    @ResponseStatus(HttpStatus.OK)
     public InventoryItemResponse consumeInventory(
             @PathVariable String warehouseId,
             @PathVariable String sku,
@@ -41,6 +44,7 @@ public class InventoryItemsController {
     }
     
     @PostMapping("warehouses/{warehouseId}/inventory/{sku}/restock")
+    @ResponseStatus(HttpStatus.OK)
     public InventoryItemResponse restockInventory(
             @PathVariable String warehouseId,
             @PathVariable String sku,
@@ -53,6 +57,7 @@ public class InventoryItemsController {
     }
 
     @PostMapping("/warehouses/{warehouseId}/inventory/{sku}/reserve")
+    @ResponseStatus(HttpStatus.OK)
     public InventoryItemResponse reserveInventory(
         @PathVariable String warehouseId,
         @PathVariable String sku,
@@ -65,6 +70,7 @@ public class InventoryItemsController {
     }
 
     @PostMapping("/warehouses/{warehouseId}/inventory/{sku}/release")
+    @ResponseStatus(HttpStatus.OK)
     public InventoryItemResponse releaseInventory(
         @PathVariable String warehouseId,
         @PathVariable String sku,
@@ -77,6 +83,7 @@ public class InventoryItemsController {
     }
 
     @GetMapping("/warehouse/{warehouseId}")
+    @ResponseStatus(HttpStatus.OK)
     public List<InventoryItemResponse> getInventoryByWarehouse(@PathVariable String warehouseId) {
         return inventoryService.getByWarehouseId(warehouseId).stream()
         .map(InventoryRestMapper::toResponse)
