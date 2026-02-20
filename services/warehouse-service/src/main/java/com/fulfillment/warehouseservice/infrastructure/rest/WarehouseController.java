@@ -63,4 +63,13 @@ public class WarehouseController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<Void> existsById(@PathVariable String id) {
+        if (warehouseService.existsById(id)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.noContent().build();
+    }
+
 }

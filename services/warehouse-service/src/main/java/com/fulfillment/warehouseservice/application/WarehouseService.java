@@ -8,7 +8,8 @@ import com.fulfillment.warehouseservice.domain.model.Warehouse;
 public interface WarehouseService {
 
     Warehouse create(CreateWarehouseCommand command);
-    Warehouse getById(String id);
+    Warehouse getById(String warehouseId);
     List<Warehouse> getAll();
     boolean existsAny();
+    boolean existsById(String warehouseId);
 }
