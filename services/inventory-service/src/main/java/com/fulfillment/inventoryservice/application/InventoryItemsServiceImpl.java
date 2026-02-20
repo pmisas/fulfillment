@@ -5,16 +5,20 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.fulfillment.inventoryservice.application.dto.InventoryCommand;
+import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
 import com.fulfillment.inventoryservice.domain.ports.InventoryItemsRepository;
+import com.fulfillment.inventoryservice.domain.ports.WarehouseClient;
 
 @Service
 public class InventoryItemsServiceImpl implements InventoryItemsService {
     
     private final InventoryItemsRepository repo;
+    private final WarehouseClient warehouseClient;
 
-    public InventoryItemsServiceImpl(InventoryItemsRepository repo) {
+    public InventoryItemsServiceImpl(InventoryItemsRepository repo, WarehouseClient warehouseClient) {
         this.repo = repo;
+        this.warehouseClient = warehouseClient;
     }
 
     @Override
@@ -33,11 +37,19 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
         String warehouseId = command.warehouseId();
         String sku = command.sku();
 
-        InventoryItem current = repo.findById(warehouseId, sku)
-                                    .orElseGet(() -> 
-                                        InventoryItem.createInventoryItem(warehouseId, sku, 0)
-                                    );
-        InventoryItem updated = current.restock(command.amount());
+        var existing = repo.findById(warehouseId, sku);
+
+        if (existing.isEmpty()) {
+            if (!warehouseClient.existsById(warehouseId)) {
+                throw new  WarehouseNotFoundException(warehouseId);
+            }
+            InventoryItem created = InventoryItem.createInventoryItem(warehouseId, sku, 0);
+
+            InventoryItem updated = created.restock(command.amount());
+            return repo.save(updated);
+        }
+
+        InventoryItem updated = existing.get().restock(command.amount());
         return repo.save(updated);
     }
 
