@@ -3,8 +3,8 @@ package com.fulfillment.inventoryservice.domain.model;
 import java.time.Instant;
 import java.util.Objects;
 
-import com.fulfillment.inventoryservice.domain.exception.InsufficientAvailableException;
-import com.fulfillment.inventoryservice.domain.exception.InsufficientReservedException;
+import com.fulfillment.inventoryservice.domain.exception.InsufficientAvailableStockException;
+import com.fulfillment.inventoryservice.domain.exception.InsufficientReservedStockException;
 
 import static com.fulfillment.inventoryservice.domain.shared.DomainValidations.requireNonBlank;
 
@@ -76,7 +76,7 @@ public class InventoryItem {
         if (amount <= 0) 
             throw new IllegalArgumentException("amount must be > 0");
         if (amount > reserved)
-            throw new InsufficientReservedException(amount, warehouseId, sku, reserved);
+            throw new InsufficientReservedStockException(amount, warehouseId, sku, reserved);
         if (amount > quantity)
             throw new  IllegalArgumentException("amount cannot exceed quantity");
 
@@ -93,7 +93,7 @@ public class InventoryItem {
         if (amount <= 0) 
             throw new IllegalArgumentException("amount must be > 0");
         if (amount > available()) 
-            throw new InsufficientAvailableException(amount, warehouseId, sku, available());
+            throw new InsufficientAvailableStockException(amount, warehouseId, sku, available());
 
         return new InventoryItem(
             warehouseId, 
