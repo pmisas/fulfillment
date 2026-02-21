@@ -40,8 +40,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) //500
   public String handleGeneric(Exception ex) {
-    return "Unexpected error";
+    return "Unexpected error"+ ex;
   }
-
 
 }

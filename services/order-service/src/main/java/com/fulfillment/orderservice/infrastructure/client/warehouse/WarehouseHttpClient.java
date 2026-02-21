@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.fulfillment.orderservice.domain.port.WarehouseClient;
+import com.fulfillment.orderservice.domain.ports.WarehouseClient;
 
 @Component
 public class WarehouseHttpClient implements WarehouseClient{
@@ -20,8 +20,8 @@ public class WarehouseHttpClient implements WarehouseClient{
 
     @Override
     public boolean anyWarehouseExists() {
-        ResponseEntity<Void> resp = client.get()
-                .uri("/api/v1/warehouses/exists")
+        ResponseEntity<Void> resp = client.head()
+                .uri("/api/v1/warehouses")
                 .retrieve()
                 .toBodilessEntity();
 

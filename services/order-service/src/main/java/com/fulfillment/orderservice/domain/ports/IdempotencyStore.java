@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.domain.port;
+package com.fulfillment.orderservice.domain.ports;
 
 import java.time.Duration;
 import java.util.Optional;

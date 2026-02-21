@@ -1,9 +1,9 @@
 package com.fulfillment.orderservice.infrastructure.idempotency.memory;
 
-import com.fulfillment.orderservice.domain.port.IdempotencyStore;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+
+import com.fulfillment.orderservice.domain.ports.IdempotencyStore;
 
 import java.time.Duration;
 import java.util.Map;

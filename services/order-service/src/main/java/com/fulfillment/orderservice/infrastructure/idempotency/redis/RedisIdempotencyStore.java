@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import com.fulfillment.orderservice.domain.port.IdempotencyStore;
+import com.fulfillment.orderservice.domain.ports.IdempotencyStore;
 
 @Component
 @Profile("cloud")

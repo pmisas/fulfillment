@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderservice.domain.model.OrderStateHistory;
-import com.fulfillment.orderservice.domain.port.OrderStateHistoryRepository;
+import com.fulfillment.orderservice.domain.ports.OrderStateHistoryRepository;
 
 @Repository
 @Profile("local")
