@@ -22,4 +22,16 @@ public class GlobalExceptionHandler {
     public String handleNotFound(WarehouseNotFoundException ex) {
         return ex.getMessage();
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST) //400
+    public String handleIllegalArg(IllegalArgumentException ex) {
+      return ex.getMessage();
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) //500
+    public String handleGeneric(Exception ex) {
+      return "Unexpected error"+ ex;
+    }
 }

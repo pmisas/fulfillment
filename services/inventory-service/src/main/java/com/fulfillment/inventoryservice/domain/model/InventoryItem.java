@@ -108,7 +108,7 @@ public class InventoryItem {
         if (amount <= 0)
             throw new IllegalArgumentException("amount must be > 0");
         if (reserved < amount) 
-            throw new IllegalArgumentException("release cannot exceed reserved");
+            throw new InsufficientReservedStockException(amount, warehouseId, sku, reserved);
         
         return new InventoryItem(
             warehouseId, 

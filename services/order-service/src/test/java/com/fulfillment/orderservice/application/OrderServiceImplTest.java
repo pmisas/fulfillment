@@ -22,10 +22,10 @@ import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStat
 import com.fulfillment.orderservice.domain.exception.WarehouseNotAvailableException;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderStateHistory;
-import com.fulfillment.orderservice.domain.port.IdempotencyStore;
-import com.fulfillment.orderservice.domain.port.OrderRepository;
-import com.fulfillment.orderservice.domain.port.OrderStateHistoryRepository;
-import com.fulfillment.orderservice.domain.port.WarehouseClient;
+import com.fulfillment.orderservice.domain.ports.IdempotencyStore;
+import com.fulfillment.orderservice.domain.ports.OrderRepository;
+import com.fulfillment.orderservice.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderservice.domain.ports.WarehouseClient;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceImplTest {

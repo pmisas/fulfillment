@@ -36,7 +36,7 @@ public class InMemoryInventoryItemsRepositoryAdapter implements InventoryItemsRe
                 result.add(entry.getValue());
             }
         }
-
+        
         return result;
     }
 

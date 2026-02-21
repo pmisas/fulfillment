@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderservice.domain.model.Order;
-import com.fulfillment.orderservice.domain.port.OrderRepository;
+import com.fulfillment.orderservice.domain.ports.OrderRepository;
 
 @Repository
 @Profile("local")

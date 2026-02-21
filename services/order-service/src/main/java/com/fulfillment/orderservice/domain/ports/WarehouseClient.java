@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.domain.port;
+package com.fulfillment.orderservice.domain.ports;
 
 public interface WarehouseClient {
     boolean anyWarehouseExists();

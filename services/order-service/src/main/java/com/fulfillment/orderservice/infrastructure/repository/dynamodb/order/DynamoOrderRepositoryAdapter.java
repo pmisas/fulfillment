@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderItem;
-import com.fulfillment.orderservice.domain.port.OrderRepository;
+import com.fulfillment.orderservice.domain.ports.OrderRepository;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
