@@ -1,0 +1,28 @@
+package com.fulfillment.orderstateprocesor.infrastructure.repository.dynamodb.processed;
+
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+
+@DynamoDbBean
+public class ProcessedEventEntity {
+
+    private String eventId;
+    private Long ttl; 
+
+    @DynamoDbPartitionKey
+    public String getEventId() { 
+        return eventId; 
+    }
+
+    public void setEventId(String eventId) { 
+        this.eventId = eventId; 
+    }
+
+    public Long getTtl() { 
+        return ttl; 
+    }
+
+    public void setTtl(Long ttl) { 
+        this.ttl = ttl; 
+    }
+}

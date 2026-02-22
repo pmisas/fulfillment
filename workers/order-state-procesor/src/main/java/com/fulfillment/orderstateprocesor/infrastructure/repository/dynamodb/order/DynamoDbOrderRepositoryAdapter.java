@@ -1,8 +1,5 @@
 package com.fulfillment.orderstateprocesor.infrastructure.repository.dynamodb.order;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -13,82 +10,68 @@ import com.fulfillment.orderstateprocesor.domain.model.OrderItem;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.*;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
 public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
 
-    private final DynamoDbClient dynamo;
-    private final String tableName;
+    private final DynamoDbTable<OrderEntity> table;
 
-    public DynamoDbOrderRepositoryAdapter(DynamoDbClient dynamo, @Value("${aws.dynamodb.ordersTable}") String tableName) {
-        this.dynamo = dynamo;
-        this.tableName = tableName;
-    }
-
-    @Override
-    public Optional<Order> findById(String orderId) {
-        GetItemRequest req = GetItemRequest.builder()
-            .tableName(tableName)
-            .key(java.util.Map.of("orderId", AttributeValue.builder().s(orderId).build()))
-            .build();
-
-        GetItemResponse resp = dynamo.getItem(req);
-        if (!resp.hasItem()) return Optional.empty();
-
-        return Optional.of(fromItem(resp.item()));
+    public DynamoDbOrderRepositoryAdapter(
+        DynamoDbEnhancedClient enhancedClient,
+        @Value("${aws.dynamodb.ordersTable}") String tableName
+    ) {
+        this.table = enhancedClient.table(tableName, TableSchema.fromBean(OrderEntity.class));
     }
 
     @Override
     public Order save(Order order) {
-        PutItemRequest req = PutItemRequest.builder()
-            .tableName(tableName)
-            .item(toItem(order))
-            .build();
-
-        dynamo.putItem(req);
+        table.putItem(toEntity(order));
         return order;
     }
 
-    private Order fromItem(java.util.Map<String, AttributeValue> item) {
-        String orderId = item.get("orderId").s();
-        String customerId = item.get("customerId").s();
-        String warehouseId = item.containsKey("warehouseId") ? item.get("warehouseId").s() : "";
-        Status status = Status.valueOf(item.get("status").s());
-
-        Instant createdAt = Instant.ofEpochMilli(Long.parseLong(item.get("createdAt").n()));
-        Instant updatedAt = Instant.ofEpochMilli(Long.parseLong(item.get("updatedAt").n()));
-
-        List<OrderItem> items = new ArrayList<>();
-        if (item.containsKey("items") && item.get("items").l() != null) {
-            for (AttributeValue av : item.get("items").l()) {
-                var m = av.m();
-                String sku = m.get("sku").s();
-                int qty = Integer.parseInt(m.get("quantity").n());
-                items.add(OrderItem.create(sku, qty));
-            }
-        }
-
-        return Order.restore(orderId, customerId, warehouseId, status, createdAt, updatedAt, items);
+    @Override
+    public Optional<Order> findById(String orderId) {
+        OrderEntity entity = table.getItem(r -> r.key(k -> k.partitionValue(orderId)));
+        return Optional.ofNullable(entity).map(this::toDomain);
     }
 
-    private java.util.Map<String, AttributeValue> toItem(Order order) {
-        List<AttributeValue> items = order.getItems().stream()
-            .map(i -> AttributeValue.builder().m(java.util.Map.of(
-                "sku", AttributeValue.builder().s(i.getSku()).build(),
-                "quantity", AttributeValue.builder().n(Integer.toString(i.getQuantity())).build()
-            )).build())
-            .toList();
+    private OrderEntity toEntity(Order order) {
+        OrderEntity e = new OrderEntity();
+        e.setOrderId(order.getOrderId());
+        e.setCustomerId(order.getCustomerId());
+        e.setWarehouseId(order.getWarehouseId() == null ? "" : order.getWarehouseId());
+        e.setStatus(order.getStatus().name());
+        e.setCreatedAt(order.getCreatedAt());
+        e.setUpdatedAt(order.getUpdatedAt());
 
-        return java.util.Map.of(
-            "orderId", AttributeValue.builder().s(order.getOrderId()).build(),
-            "customerId", AttributeValue.builder().s(order.getCustomerId()).build(),
-            "warehouseId", AttributeValue.builder().s(order.getWarehouseId() == null ? "" : order.getWarehouseId()).build(),
-            "status", AttributeValue.builder().s(order.getStatus().name()).build(),
-            "createdAt", AttributeValue.builder().n(Long.toString(order.getCreatedAt().toEpochMilli())).build(),
-            "updatedAt", AttributeValue.builder().n(Long.toString(order.getUpdatedAt().toEpochMilli())).build(),
-            "items", AttributeValue.builder().l(items).build()
+        var items = order.getItems().stream().map(i -> {
+            OrderEntity.Item di = new OrderEntity.Item();
+            di.setSku(i.getSku());
+            di.setQuantity(i.getQuantity());
+            return di;
+        }).toList();
+
+        e.setItems(items);
+        return e;
+    }
+
+    private Order toDomain(OrderEntity e) {
+        var items = (e.getItems() == null ? java.util.List.<OrderItem>of()
+            : e.getItems().stream()
+                .map(i -> OrderItem.create(i.getSku(), i.getQuantity()))
+                .toList());
+
+        return Order.restore(
+            e.getOrderId(),
+            e.getCustomerId(),
+            e.getWarehouseId(),
+            Status.valueOf(e.getStatus()),
+            e.getCreatedAt(),
+            e.getUpdatedAt(),
+            items
         );
     }
 }

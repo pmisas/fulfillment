@@ -6,35 +6,34 @@ import org.springframework.stereotype.Repository;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
 
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.*;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
 public class DynamoDbOrderStateHistoryRepositoryAdapter implements OrderStateHistoryRepository {
 
-    private final DynamoDbClient dynamo;
-    private final String tableName;
+    private final DynamoDbTable<OrderStateHistoryEntity> table;
 
-    public DynamoDbOrderStateHistoryRepositoryAdapter(DynamoDbClient dynamo,
+    public DynamoDbOrderStateHistoryRepositoryAdapter(
+        DynamoDbEnhancedClient enhancedClient,
         @Value("${aws.dynamodb.historyTable}") String tableName
     ) {
-        this.dynamo = dynamo;
-        this.tableName = tableName;
+        this.table = enhancedClient.table(tableName, TableSchema.fromBean(OrderStateHistoryEntity.class));
     }
 
     @Override
     public void append(OrderStateHistory history) {
-        var item = java.util.Map.<String, AttributeValue>of(
-            "historyId", AttributeValue.builder().s(history.getHistoryId()).build(),
-            "orderId", AttributeValue.builder().s(history.getOrderId()).build(),
-            "fromStatus", AttributeValue.builder().s(history.getFromStatus() == null ? "" : history.getFromStatus().name()).build(),
-            "toStatus", AttributeValue.builder().s(history.getToStatus().name()).build(),
-            "changedAt", AttributeValue.builder().n(Long.toString(history.getChangedAt().toEpochMilli())).build()
-        );
+        table.putItem(toEntity(history));
+    }
 
-        dynamo.putItem(PutItemRequest.builder()
-            .tableName(tableName)
-            .item(item)
-            .build());
+    private OrderStateHistoryEntity toEntity(OrderStateHistory h) {
+        OrderStateHistoryEntity e = new OrderStateHistoryEntity();
+        e.setHistoryId(h.getHistoryId());
+        e.setOrderId(h.getOrderId());
+        e.setFromStatus(h.getFromStatus() == null ? "" : h.getFromStatus().name());
+        e.setToStatus(h.getToStatus().name());
+        e.setChangedAt(h.getChangedAt());
+        return e;
     }
 }
