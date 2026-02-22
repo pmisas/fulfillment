@@ -8,39 +8,42 @@ import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderstateprocesor.domain.ports.ProcessedEventStore;
 
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.*;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 @Repository
 public class DynamoDbProcessedEventStoreAdapter implements ProcessedEventStore {
 
-    private final DynamoDbClient dynamo;
-    private final String tableName;
+    private final DynamoDbTable<ProcessedEventEntity> table;
 
-    public DynamoDbProcessedEventStoreAdapter(DynamoDbClient dynamo,
+    public DynamoDbProcessedEventStoreAdapter(
+        DynamoDbEnhancedClient enhancedClient,
         @Value("${aws.dynamodb.processedEventsTable}") String tableName
     ) {
-        this.dynamo = dynamo;
-        this.tableName = tableName;
+        this.table = enhancedClient.table(tableName, TableSchema.fromBean(ProcessedEventEntity.class));
     }
 
     @Override
     public boolean putIfAbsent(String eventId, Duration ttl) {
         long ttlSeconds = Instant.now().plus(ttl).getEpochSecond();
 
-        var item = java.util.Map.<String, AttributeValue>of(
-            "eventId", AttributeValue.builder().s(eventId).build(),
-            "ttl", AttributeValue.builder().n(Long.toString(ttlSeconds)).build()
-        );
-
-        PutItemRequest req = PutItemRequest.builder()
-            .tableName(tableName)
-            .item(item)
-            .conditionExpression("attribute_not_exists(eventId)")
-            .build();
+        ProcessedEventEntity entity = new ProcessedEventEntity();
+        entity.setEventId(eventId);
+        entity.setTtl(ttlSeconds);
 
         try {
-            dynamo.putItem(req);
+            // Condición: solo insert si NO existe
+            table.putItem(r -> r
+                .item(entity)
+                .conditionExpression(
+                    software.amazon.awssdk.enhanced.dynamodb.Expression.builder()
+                        .expression("attribute_not_exists(eventId)")
+                        .build()
+                )
+            );
             return true;
         } catch (ConditionalCheckFailedException e) {
             return false;
