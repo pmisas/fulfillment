@@ -4,15 +4,15 @@ import java.util.Map;
 import java.util.Set;
 
 public enum Status {
-    CREATED,
-    CONFIRMED,
+    RECEIVED,
+    VALIDATED,
     SHIPPED,
     CANCELED,
     PACKED;
 
     private static final Map<Status, Set<Status>> ALLOWED = Map.of(
-        CREATED, Set.of(CONFIRMED, CANCELED),
-        CONFIRMED, Set.of(PACKED, CANCELED),
+        RECEIVED, Set.of(VALIDATED, CANCELED),
+        VALIDATED, Set.of(PACKED, CANCELED),
         PACKED, Set.of(SHIPPED),
         SHIPPED, Set.of(),
         CANCELED, Set.of()

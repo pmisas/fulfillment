@@ -11,7 +11,8 @@ public final class OrderRestMapper {
 
     public static CreateOrderCommand toCommand(CreateOrderRequest req){
         return new CreateOrderCommand(
-            req.customerId(),
+            req.lat(),
+            req.lng(),
             req.items().stream()
                     .map(item -> new CreateOrderCommand.Item(
                 item.sku(),
@@ -22,15 +23,9 @@ public final class OrderRestMapper {
     }
 
     public static OrderResponse toResponse(Order order) {
-        var items = order.getItems().stream()
-                    .map(i -> new OrderResponse.Item(i.getSku(), i.getQuantity()))
-                    .toList();
-
         return new OrderResponse(
             order.getOrderId(),
-            order.getCustomerId(),
-            order.getStatus().name(),
-            items
+            order.getStatus().name()
         );
     }
 

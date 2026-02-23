@@ -30,14 +30,13 @@ public class OrderStateHistory {
     }
 
     public static OrderStateHistory createOrderStateHistory(
-                    String orderId
-        ) {
+                    String orderId) {
         Instant now = Instant.now();
         return new OrderStateHistory(
             UUID.randomUUID().toString(),
             orderId,
             null,
-            Status.CREATED,
+            Status.RECEIVED,
             now
         );
     }

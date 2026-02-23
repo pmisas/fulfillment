@@ -4,7 +4,8 @@ import java.util.List;
 
 
 public record CreateOrderCommand(
-    String customerId,
+    Double lat,
+    Double lng,
     List<Item> items) {
     public record Item(String sku, int quantity) {
     }
