@@ -57,8 +57,8 @@ public class OrderStateProcessorServiceImpl implements OrderStateProcessorServic
         Order order = orderRepo.findById(orderId)
             .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        if (order.getStatus() != Status.RECEIVED) {
-            return; 
+            if (order.getStatus() != Status.RECEIVED) {
+                return; 
         }
 
         String selectedWarehouseId = chooseWarehouse(order);
