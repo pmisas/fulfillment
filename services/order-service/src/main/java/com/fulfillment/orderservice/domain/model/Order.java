@@ -7,14 +7,13 @@ import java.util.UUID;
 
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 
-import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
-
 public class Order {
 
     private final String orderId;
     private final String werehouseId;
-    private final String customerId;
     private final Status status;
+    private final double lat;
+    private final double lng;
     private final Instant createdAt;
     private final Instant updatedAt;
     private final List<OrderItem> items;
@@ -23,15 +22,17 @@ public class Order {
     private Order(
             String orderId,
             String werehouseId,
-            String customerId,
             Status status,
             Instant createdAt,
             Instant updatedAt,
+            double lat,
+            double lng,
             List<OrderItem> items) {
         this.orderId = orderId;
-        this.werehouseId = requireNonBlank(werehouseId, "werehouse");
-        this.customerId = requireNonBlank(customerId, "customer_id");
+        this.werehouseId = werehouseId;
         this.status = Objects.requireNonNull(status);
+        this.lat = lat;
+        this.lng = lng;
         this.createdAt = Objects.requireNonNull(createdAt);
         this.updatedAt = Objects.requireNonNull(updatedAt);
         this.items = List.copyOf(Objects.requireNonNull(items));
@@ -41,20 +42,23 @@ public class Order {
     }
 
     public static Order createOrder(
-                String werehouseId,
-                String customerId,
+                double lat,
+                double lng,
                 List<OrderItem> items) {
     Instant now = Instant.now();
     return new Order(
-        UUID.randomUUID().toString(),
-        werehouseId, 
-        customerId,
-        Status.CREATED,
-        now,
-        now,
-        items
+            UUID.randomUUID().toString(),
+            null,
+            Status.RECEIVED,
+            now,
+            now,
+            lat,
+            lng,
+            items
         );
     }
+
+    
 
     public Order withStatus(Status newStatus) {
         if (!this.status.canTransitionTo(newStatus)) {
@@ -63,10 +67,11 @@ public class Order {
         return new Order(
             this.orderId,
             this.werehouseId,
-            this.customerId,
             Objects.requireNonNull(newStatus),
             this.createdAt,
             Instant.now(),
+            this.lat,
+            this.lng,
             this.items
         );
     }
@@ -74,14 +79,14 @@ public class Order {
     public static Order restore(
             String orderId,
             String werehouseId,
-            String customerId,
             Status status,
             Instant createdAt,
             Instant updatedAt,
-            List<OrderItem> items
-    ) {
+            double lat,
+            double lng,
+            List<OrderItem> items) {
         return new Order(
-            orderId, werehouseId, customerId, status, createdAt, updatedAt, items);
+            orderId, werehouseId, status, createdAt, updatedAt, lat, lng, items);
     }
 
     
@@ -91,10 +96,6 @@ public class Order {
 
     public String getWerehouseId() {
         return werehouseId;
-    }
-
-    public String getCustomerId() {
-        return customerId;
     }
 
     public Status getStatus() {
@@ -107,6 +108,14 @@ public class Order {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public double getLng() {
+        return lng;
     }
 
     public List<OrderItem> getItems() {

@@ -43,11 +43,12 @@ public class DynamoOrderRepositoryAdapter implements OrderRepository{
     private OrderEntity toEntity(Order order) {
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
-        e.setCustomerId(order.getCustomerId());
         e.setWarehouseId(order.getWerehouseId());
         e.setStatus(order.getStatus());
         e.setCreatedAt(order.getCreatedAt());
         e.setUpdatedAt(order.getUpdatedAt());
+        e.setLat(order.getLat());
+        e.setLng(order.getLng());
 
         var items = order.getItems().stream().map(i -> {
             OrderEntity.Item di = new OrderEntity.Item();
@@ -68,10 +69,11 @@ public class DynamoOrderRepositoryAdapter implements OrderRepository{
         return Order.restore(
             e.getOrderId(),
             e.getWarehouseId(),
-            e.getCustomerId(),
             e.getStatus(),
             e.getCreatedAt(),
             e.getUpdatedAt(),
+            e.getLat(),
+            e.getLng(),
             items
         );
     }
