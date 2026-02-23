@@ -34,29 +34,26 @@ public class DynamoStateHistoryRepositoryAdapter implements OrderStateHistoryRep
 
     @Override
     public List<OrderStateHistory> findByOrderId(String orderId) {
-            return table.query(r -> r.queryConditional(
-                    QueryConditional.keyEqualTo(k -> 
-                        k.partitionValue(orderId))
-                    ))
-                    .items()
-                    .stream()
-                    .map(this::toDomain)
-                    .toList();
+        return table.query(r -> r.queryConditional(
+                QueryConditional.keyEqualTo(k -> k.partitionValue(orderId))
+            )).stream()
+            .flatMap(page -> page.items().stream())
+            .map(this::toDomain)
+            .toList();
     }
-
+    
 
     private OrderStateHistoryEntity toEntity(OrderStateHistory history) {
         OrderStateHistoryEntity e = new OrderStateHistoryEntity();
-        e.setHistoryId(history.getHistoryId());
         e.setOrderId(history.getOrderId());
+        e.setChangedAt(history.getchangedAt());
+        e.setHistoryId(history.getHistoryId());
         e.setFromStatus(history.getFromStatus());
         e.setToStatus(history.getToStatus());
-        e.setChangedAt(history.getchangedAt());
         return e;
     }
 
     private OrderStateHistory toDomain(OrderStateHistoryEntity e) {
-        
         return OrderStateHistory.restore(
             e.getHistoryId(),
             e.getOrderId(),

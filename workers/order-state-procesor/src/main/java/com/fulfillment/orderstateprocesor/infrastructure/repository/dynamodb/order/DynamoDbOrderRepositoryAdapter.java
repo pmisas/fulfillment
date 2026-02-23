@@ -3,6 +3,7 @@ package com.fulfillment.orderstateprocesor.infrastructure.repository.dynamodb.or
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderstateprocesor.domain.model.Order;
@@ -15,6 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
+@Profile("cloud")
 public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
 
     private final DynamoDbTable<OrderEntity> table;

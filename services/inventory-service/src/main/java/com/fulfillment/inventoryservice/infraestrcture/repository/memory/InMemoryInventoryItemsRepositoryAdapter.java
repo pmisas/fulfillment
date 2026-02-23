@@ -1,16 +1,18 @@
-package com.fulfillment.inventoryservice.infraestrcture.repository;
+package com.fulfillment.inventoryservice.infraestrcture.repository.memory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
 import com.fulfillment.inventoryservice.domain.ports.InventoryItemsRepository;
 
 @Repository
+@Profile("local")
 public class InMemoryInventoryItemsRepositoryAdapter implements InventoryItemsRepository{
     
     private final ConcurrentHashMap<String, InventoryItem> store = new ConcurrentHashMap<>();

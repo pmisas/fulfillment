@@ -6,55 +6,56 @@ import com.fulfillment.orderservice.domain.model.Status;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
 @DynamoDbBean
 public class OrderStateHistoryEntity {
-    
-    private String historyId;
-    private String orderId;
+
+    private String orderId;    
+    private Instant changedAt;
+    private String historyId; 
     private Status fromStatus;
     private Status toStatus;
-    private Instant changedAt;
 
     @DynamoDbPartitionKey
-    public String getHistoryId() {
-        return historyId;
+    public String getOrderId() { 
+        return orderId; 
     }
 
-    public void setHistoryId(String historyId) {
-        this.historyId = historyId;
+    public void setOrderId(String orderId) { 
+        this.orderId = orderId; 
     }
 
-    public String getOrderId() {
-        return orderId;
+    @DynamoDbSortKey
+    public Instant getChangedAt() { 
+        return changedAt; 
     }
 
-    public void setOrderId(String orderId) {
-        this.orderId = orderId;
+    public void setChangedAt(Instant changedAt) { 
+        this.changedAt = changedAt; 
     }
 
-    public Status getFromStatus() {
-        return fromStatus;
+    public String getHistoryId() { 
+        return historyId; 
     }
 
-    public void setFromStatus(Status fromStatus) {
-        this.fromStatus = fromStatus;
+    public void setHistoryId(String historyId) { 
+        this.historyId = historyId; 
     }
 
-    public Status getToStatus() {
-        return toStatus;
+    public Status getFromStatus() { 
+        return fromStatus; 
     }
 
-    public void setToStatus(Status toStatus) {
-        this.toStatus = toStatus;
+    public void setFromStatus(Status fromStatus) { 
+        this.fromStatus = fromStatus; 
     }
 
-    public Instant getChangedAt() {
-        return changedAt;
+    public Status getToStatus() { 
+        return toStatus; 
     }
 
-    public void setChangedAt(Instant changedAt) {
-        this.changedAt = changedAt;
+    public void setToStatus(Status toStatus) { 
+        this.toStatus = toStatus; 
     }
-
 }
