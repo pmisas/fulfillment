@@ -43,9 +43,10 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
     private OrderEntity toEntity(Order order) {
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
-        e.setCustomerId(order.getCustomerId());
         e.setWarehouseId(order.getWarehouseId() == null ? "" : order.getWarehouseId());
         e.setStatus(order.getStatus().name());
+        e.setLat(order.getLat());
+        e.setLng(order.getLng());
         e.setCreatedAt(order.getCreatedAt());
         e.setUpdatedAt(order.getUpdatedAt());
 
@@ -68,9 +69,10 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
 
         return Order.restore(
             e.getOrderId(),
-            e.getCustomerId(),
             e.getWarehouseId(),
             Status.valueOf(e.getStatus()),
+            e.getLat() != null ? e.getLat() : 0.0,
+            e.getLng() != null ? e.getLng() : 0.0,
             e.getCreatedAt(),
             e.getUpdatedAt(),
             items

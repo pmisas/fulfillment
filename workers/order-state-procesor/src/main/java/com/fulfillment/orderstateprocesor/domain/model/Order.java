@@ -10,26 +10,29 @@ import static com.fulfillment.orderstateprocesor.domain.shared.DomainValidations
 
 public class Order {
     private final String orderId;
-    private final String customerId;
-    private final String warehouseId; // puede ser null/blank si aún no asignas
+    private final String warehouseId;
     private final Status status;
+    private final double lat;
+    private final double lng;
     private final Instant createdAt;
     private final Instant updatedAt;
     private final List<OrderItem> items;
 
     private Order(
         String orderId,
-        String customerId,
         String warehouseId,
         Status status,
+        double lat,
+        double lng,
         Instant createdAt,
         Instant updatedAt,
         List<OrderItem> items
     ) {
         this.orderId = requireNonBlank(orderId, "orderId");
-        this.customerId = requireNonBlank(customerId, "customerId");
         this.warehouseId = warehouseId == null ? "" : warehouseId.trim();
         this.status = Objects.requireNonNull(status, "status");
+        this.lat = lat;
+        this.lng = lng;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
         this.items = List.copyOf(Objects.requireNonNull(items, "items"));
@@ -38,32 +41,34 @@ public class Order {
 
     public static Order restore(
         String orderId,
-        String customerId,
         String warehouseId,
         Status status,
+        double lat,
+        double lng,
         Instant createdAt,
         Instant updatedAt,
         List<OrderItem> items
     ) {
-        return new Order(orderId, customerId, warehouseId, status, createdAt, updatedAt, items);
+        return new Order(orderId, warehouseId, status, lat, lng, createdAt, updatedAt, items);
     }
 
     public Order withStatus(Status newStatus) {
         if (!this.status.canTransitionTo(newStatus)) {
             throw new InvalidStatusTransitionException(this.status, newStatus);
         }
-        return new Order(orderId, customerId, warehouseId, newStatus, createdAt, Instant.now(), items);
+        return new Order(orderId, warehouseId, newStatus, lat, lng, createdAt, Instant.now(), items);
     }
 
     public Order withWarehouse(String newWarehouseId) {
         String wh = requireNonBlank(newWarehouseId, "warehouseId").trim();
-        return new Order(orderId, customerId, wh, status, createdAt, Instant.now(), items);
+        return new Order(orderId, wh, status, lat, lng, createdAt, Instant.now(), items);
     }
 
     public String getOrderId() { return orderId; }
-    public String getCustomerId() { return customerId; }
     public String getWarehouseId() { return warehouseId; }
     public Status getStatus() { return status; }
+    public double getLat() { return lat; }
+    public double getLng() { return lng; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<OrderItem> getItems() { return items; }

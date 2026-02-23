@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderItem;
+import com.fulfillment.orderservice.domain.model.Status;
 import com.fulfillment.orderservice.domain.ports.OrderRepository;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -44,7 +45,7 @@ public class DynamoOrderRepositoryAdapter implements OrderRepository{
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
         e.setWarehouseId(order.getWerehouseId());
-        e.setStatus(order.getStatus());
+        e.setStatus(order.getStatus().name());
         e.setCreatedAt(order.getCreatedAt());
         e.setUpdatedAt(order.getUpdatedAt());
         e.setLat(order.getLat());
@@ -69,7 +70,7 @@ public class DynamoOrderRepositoryAdapter implements OrderRepository{
         return Order.restore(
             e.getOrderId(),
             e.getWarehouseId(),
-            e.getStatus(),
+            Status.valueOf(e.getStatus()),
             e.getCreatedAt(),
             e.getUpdatedAt(),
             e.getLat(),

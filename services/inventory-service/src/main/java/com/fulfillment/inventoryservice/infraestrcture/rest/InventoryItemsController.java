@@ -43,7 +43,7 @@ public class InventoryItemsController {
         return InventoryRestMapper.toResponse(item);
     }
     
-    @PostMapping("warehouses/{warehouseId}/inventory/{sku}/restock")
+    @PostMapping("/warehouses/{warehouseId}/inventory/{sku}/restock")
     @ResponseStatus(HttpStatus.OK)
     public InventoryItemResponse restockInventory(
             @PathVariable String warehouseId,

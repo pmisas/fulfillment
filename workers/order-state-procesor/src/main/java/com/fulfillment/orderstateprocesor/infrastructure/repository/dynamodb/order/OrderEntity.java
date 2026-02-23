@@ -10,9 +10,10 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrderEntity {
 
     private String orderId;
-    private String customerId;
     private String warehouseId;
     private String status; 
+    private Double lat;
+    private Double lng;
     private Instant createdAt;
     private Instant updatedAt;
     private List<Item> items;
@@ -24,14 +25,6 @@ public class OrderEntity {
 
     public void setOrderId(String orderId) { 
         this.orderId = orderId; 
-    }
-
-    public String getCustomerId() { 
-        return customerId; 
-    }
-
-    public void setCustomerId(String customerId) { 
-        this.customerId = customerId; 
     }
 
     public String getWarehouseId() { 
@@ -48,6 +41,22 @@ public class OrderEntity {
 
     public void setStatus(String status) { 
         this.status = status; 
+    }
+
+    public Double getLat() { 
+        return lat; 
+    }
+
+    public void setLat(Double lat) { 
+        this.lat = lat; 
+    }
+
+    public Double getLng() { 
+        return lng; 
+    }
+
+    public void setLng(Double lng) { 
+        this.lng = lng; 
     }
 
     public Instant getCreatedAt() { 

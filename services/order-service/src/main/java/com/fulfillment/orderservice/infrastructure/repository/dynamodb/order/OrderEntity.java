@@ -3,8 +3,6 @@ package com.fulfillment.orderservice.infrastructure.repository.dynamodb.order;
 import java.time.Instant;
 import java.util.List;
 
-import com.fulfillment.orderservice.domain.model.Status;
-
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
@@ -13,7 +11,7 @@ public class OrderEntity {
     
     private String orderId;
     private String warehouseId;
-    private Status status;
+    private String status;
     private Instant createdAt;
     private Instant updatedAt;
     private Double lat;
@@ -37,11 +35,11 @@ public class OrderEntity {
         this.warehouseId = warehouseId;
     }
 
-    public Status getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 
