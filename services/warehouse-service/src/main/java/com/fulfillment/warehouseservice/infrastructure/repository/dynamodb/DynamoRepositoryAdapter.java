@@ -22,7 +22,7 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
 
     public DynamoRepositoryAdapter(
                 DynamoDbEnhancedClient enhancedClient,
-                @Value("${aws.dynamodb.table}") String tableName) {
+                @Value("${aws.dynamodb.warehouses-table}") String tableName) {
         this.table = enhancedClient.table(tableName, 
             TableSchema.fromBean(WarehouseEntity.class));
     }
