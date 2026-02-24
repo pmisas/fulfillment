@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface WarehouseClient {
     boolean existsById(String warehouseId);
-    List<String> listWarehouseIds(); 
+    List<String> listWarehouses(); 
 }

@@ -26,7 +26,11 @@ public class WarehouseServiceImpl implements WarehouseService{
                 {throw new WarehouseAlreadyExistsException(command.city());
             });
         
-        Warehouse warehouse = Warehouse.createWarehouse(command.city());
+        Warehouse warehouse = Warehouse.createWarehouse(
+                                command.city(), 
+                                command.lat(), 
+                                command.lng()
+        );
         repo.save(warehouse);
         return warehouse;
     }

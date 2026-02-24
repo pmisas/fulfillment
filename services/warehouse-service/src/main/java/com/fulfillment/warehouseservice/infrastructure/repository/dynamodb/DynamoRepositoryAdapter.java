@@ -81,6 +81,8 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
         WarehouseEntity e = new WarehouseEntity();
         e.setWarehouseId(warehouse.getWarehouseId());
         e.setCity(warehouse.getCity());
+        e.setLat(warehouse.getLat());
+        e.setLng(warehouse.getLng());
         e.setCreatedAt(warehouse.getCreatedAt());
 
         return e;
@@ -90,6 +92,8 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
         return Warehouse.restore(
             e.getWarehouseId(),
             e.getCity(),
+            e.getLat(),
+            e.getLng(),
             e.getCreatedAt()
         );
     }

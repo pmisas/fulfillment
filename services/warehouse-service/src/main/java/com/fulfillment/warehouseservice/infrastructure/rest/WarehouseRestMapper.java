@@ -8,7 +8,7 @@ import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseRespons
 public class WarehouseRestMapper {
     
     public static CreateWarehouseCommand toCommand(CreateWarehouseRequest req) {
-        return new CreateWarehouseCommand(req.city());
+        return new CreateWarehouseCommand(req.city(), req.lat(), req.lng());
     }
     
     public static WarehouseResponse toResponse(Warehouse warehouse) {

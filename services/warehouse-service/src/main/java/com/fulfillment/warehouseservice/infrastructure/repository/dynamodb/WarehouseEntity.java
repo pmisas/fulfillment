@@ -10,6 +10,8 @@ public class WarehouseEntity {
     
     private String warehouseId;
     private String city;
+    private double lat;
+    private double lng;
     private Instant createdAt;
 
     @DynamoDbPartitionKey
@@ -23,6 +25,22 @@ public class WarehouseEntity {
 
     public String getCity() {
         return this.city;
+    }
+
+    public double getLat() {
+        return this.lat;
+    }
+
+    public void setLat(double lat) {
+        this.lat = lat;
+    }
+
+    public double getLng() {
+        return this.lng;
+    }
+
+    public void setLng(double lng) {
+        this.lng = lng;
     }
 
     public void setCity(String city) {
