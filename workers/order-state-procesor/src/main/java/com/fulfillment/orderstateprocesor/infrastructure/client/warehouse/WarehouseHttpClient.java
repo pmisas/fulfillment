@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import com.fulfillment.orderstateprocesor.domain.ports.WarehouseClient;
+import com.fulfillment.orderstateprocesor.infrastructure.client.dto.WarehouseListResponse;
 
 @Component
 public class WarehouseHttpClient implements WarehouseClient {
@@ -28,7 +29,7 @@ public class WarehouseHttpClient implements WarehouseClient {
     }
 
     @Override
-    public List<String> listWarehouseIds() {
+    public List<String> listWarehouses() {
         var arr = client.get()
             .uri("/api/v1/warehouses")
             .retrieve()
@@ -37,6 +38,4 @@ public class WarehouseHttpClient implements WarehouseClient {
         if (arr == null) return List.of();
         return java.util.Arrays.stream(arr).map(WarehouseListResponse::warehouseId).toList();
     }
-
-    public record WarehouseListResponse(String warehouseId, String city) {}
 }

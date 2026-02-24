@@ -88,7 +88,7 @@ public class OrderStateProcessorServiceImpl implements OrderStateProcessorServic
             return existing;
         }
 
-        List<String> ids = warehouseClient.listWarehouseIds();
+        List<String> ids = warehouseClient.listWarehouses();
         if (ids.isEmpty()) throw new IllegalStateException("No warehouses available");
         return ids.get(0);
     }
