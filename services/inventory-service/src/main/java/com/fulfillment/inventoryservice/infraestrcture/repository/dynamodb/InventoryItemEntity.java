@@ -2,10 +2,16 @@ package com.fulfillment.inventoryservice.infraestrcture.repository.dynamodb;
 
 import java.time.Instant;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @DynamoDbBean
 public class InventoryItemEntity {
 
@@ -24,56 +30,9 @@ public class InventoryItemEntity {
         return warehouseId; 
     }
 
-    public void setWarehouseId(String warehouseId) { 
-        this.warehouseId = warehouseId; 
-    }
-
     @DynamoDbSortKey
     public String getSku() { 
         return sku; 
     }
 
-    public void setSku(String sku) { 
-        this.sku = sku; 
-    }
-
-    public Integer getQuantity() { 
-        return quantity; 
-    }
-
-    public void setQuantity(Integer quantity) { 
-        this.quantity = quantity; 
-    }
-
-    public Integer getReserved() { 
-        return reserved; 
-    }
-
-    public void setReserved(Integer reserved) { 
-        this.reserved = reserved; 
-    }
-
-    public Instant getUpdatedAt() { 
-        return updatedAt; 
-    }
-
-    public void setUpdatedAt(Instant updatedAt) { 
-        this.updatedAt = updatedAt; 
-    }
-
-    public String getLowStockKey() { 
-        return lowStockKey; 
-    }
-
-    public void setLowStockKey(String lowStockKey) { 
-        this.lowStockKey = lowStockKey; 
-    }
-
-    public Integer getAvailable() { 
-        return available; 
-    }
-
-    public void setAvailable(Integer available) { 
-        this.available = available; 
-    }
 }

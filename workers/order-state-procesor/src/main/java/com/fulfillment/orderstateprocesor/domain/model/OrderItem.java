@@ -2,6 +2,9 @@ package com.fulfillment.orderstateprocesor.domain.model;
 
 import static com.fulfillment.orderstateprocesor.domain.shared.DomainValidations.requireNonBlank;
 
+import lombok.Getter;
+
+@Getter
 public class OrderItem {
     private final String sku;
     private final int quantity;
@@ -16,6 +19,4 @@ public class OrderItem {
         return new OrderItem(sku, quantity);
     }
 
-    public String getSku() { return sku; }
-    public int getQuantity() { return quantity; }
 } 

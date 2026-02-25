@@ -6,6 +6,9 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Getter;
+
+@Getter
 public class OrderStateHistory {
     
     private final String orderId;
@@ -76,23 +79,4 @@ public class OrderStateHistory {
         );
     }
 
-    public String getHistoryId() {
-        return historyId;
-    }
-
-    public String getOrderId() {
-        return orderId;
-    }
-
-    public Status getFromStatus() {
-        return fromStatus;
-    }
-
-    public Status getToStatus() {
-        return toStatus;
-    }
-
-    public Instant getchangedAt() {
-        return changedAt;
-    }
 }

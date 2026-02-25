@@ -4,8 +4,13 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import static com.fulfillment.warehouseservice.domain.shared.DomainValidations.requireNonBlank;
 
+@Getter
+@Setter
 public class Warehouse {
     private final String warehouseId;
     private final String city;
@@ -45,26 +50,6 @@ public class Warehouse {
             Instant createdAt
     ) {
         return new Warehouse(warehouseId, city, lat, lng , createdAt);
-    }
-
-    public String getWarehouseId() {
-        return this.warehouseId;
-    }
-
-    public String getCity() {
-        return this.city;
-    }
-
-    public double getLat() {
-        return this.lat;
-    }   
-    
-    public double getLng() {
-        return this.lng;
-    }
-
-    public Instant getCreatedAt() {
-        return this.createdAt;
     }
 
 }
