@@ -6,8 +6,11 @@ import java.util.Objects;
 
 import com.fulfillment.orderstateprocesor.domain.exception.InvalidStatusTransitionException;
 
+import lombok.Getter;
+
 import static com.fulfillment.orderstateprocesor.domain.shared.DomainValidations.requireNonBlank;
 
+@Getter
 public class Order {
     private final String orderId;
     private final String warehouseId;
@@ -63,13 +66,4 @@ public class Order {
         String wh = requireNonBlank(newWarehouseId, "warehouseId").trim();
         return new Order(orderId, wh, status, lat, lng, createdAt, Instant.now(), items);
     }
-
-    public String getOrderId() { return orderId; }
-    public String getWarehouseId() { return warehouseId; }
-    public Status getStatus() { return status; }
-    public double getLat() { return lat; }
-    public double getLng() { return lng; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public List<OrderItem> getItems() { return items; }
 }

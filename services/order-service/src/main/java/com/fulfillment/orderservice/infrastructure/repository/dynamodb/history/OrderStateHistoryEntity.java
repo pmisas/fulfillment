@@ -4,10 +4,16 @@ import java.time.Instant;
 
 import com.fulfillment.orderservice.domain.model.Status;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @DynamoDbBean
 public class OrderStateHistoryEntity {
 
@@ -22,40 +28,9 @@ public class OrderStateHistoryEntity {
         return orderId; 
     }
 
-    public void setOrderId(String orderId) { 
-        this.orderId = orderId; 
-    }
-
     @DynamoDbSortKey
     public Instant getChangedAt() { 
         return changedAt; 
     }
 
-    public void setChangedAt(Instant changedAt) { 
-        this.changedAt = changedAt; 
-    }
-
-    public String getHistoryId() { 
-        return historyId; 
-    }
-
-    public void setHistoryId(String historyId) { 
-        this.historyId = historyId; 
-    }
-
-    public Status getFromStatus() { 
-        return fromStatus; 
-    }
-
-    public void setFromStatus(Status fromStatus) { 
-        this.fromStatus = fromStatus; 
-    }
-
-    public Status getToStatus() { 
-        return toStatus; 
-    }
-
-    public void setToStatus(Status toStatus) { 
-        this.toStatus = toStatus; 
-    }
 }

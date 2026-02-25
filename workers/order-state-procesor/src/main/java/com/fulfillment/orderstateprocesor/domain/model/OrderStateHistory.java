@@ -4,8 +4,11 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Getter;
+
 import static com.fulfillment.orderstateprocesor.domain.shared.DomainValidations.requireNonBlank;
 
+@Getter
 public class OrderStateHistory {
     private final String historyId;
     private final String orderId;
@@ -32,9 +35,4 @@ public class OrderStateHistory {
         return new OrderStateHistory(UUID.randomUUID().toString(), orderId, from, to, Instant.now());
     }
 
-    public String getHistoryId() { return historyId; }
-    public String getOrderId() { return orderId; }
-    public Status getFromStatus() { return fromStatus; }
-    public Status getToStatus() { return toStatus; }
-    public Instant getChangedAt() { return changedAt; }
 } 

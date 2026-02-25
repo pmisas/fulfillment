@@ -7,6 +7,9 @@ import java.util.UUID;
 
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 
+import lombok.Getter;
+
+@Getter
 public class Order {
 
     private final String orderId;
@@ -87,39 +90,6 @@ public class Order {
             List<OrderItem> items) {
         return new Order(
             orderId, werehouseId, status, createdAt, updatedAt, lat, lng, items);
-    }
-
-    
-    public String getOrderId() {
-        return orderId;
-    }
-
-    public String getWerehouseId() {
-        return werehouseId;
-    }
-
-    public Status getStatus() {
-        return status;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public double getLat() {
-        return lat;
-    }
-
-    public double getLng() {
-        return lng;
-    }
-
-    public List<OrderItem> getItems() {
-        return items;
     }
 
 }

@@ -6,8 +6,11 @@ import java.util.Objects;
 import com.fulfillment.inventoryservice.domain.exception.InsufficientAvailableStockException;
 import com.fulfillment.inventoryservice.domain.exception.InsufficientReservedStockException;
 
+import lombok.Getter;
+
 import static com.fulfillment.inventoryservice.domain.shared.DomainValidations.requireNonBlank;
 
+@Getter
 public class InventoryItem {
     
     private final String warehouseId;
@@ -123,23 +126,4 @@ public class InventoryItem {
         return quantity - reserved;
     }
 
-    public String getWarehouseId() {
-        return warehouseId;
-    }
-
-    public String getSku() {
-        return sku;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public int getReserved() {
-        return reserved;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
 } 
