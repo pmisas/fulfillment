@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import com.fulfillment.orderservice.domain.model.OrderStateHistory;
 import com.fulfillment.orderservice.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderservice.infrastructure.repository.dynamodb.OrderEntityMapper;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -29,7 +30,7 @@ public class DynamoStateHistoryRepositoryAdapter implements OrderStateHistoryRep
 
     @Override
     public void append(OrderStateHistory history) {
-        table.putItem(toEntity(history));
+        table.putItem(OrderEntityMapper.toEntity(history));
     }
 
     @Override
@@ -38,29 +39,7 @@ public class DynamoStateHistoryRepositoryAdapter implements OrderStateHistoryRep
                 QueryConditional.keyEqualTo(k -> k.partitionValue(orderId))
             )).stream()
             .flatMap(page -> page.items().stream())
-            .map(this::toDomain)
+            .map(OrderEntityMapper::toDomain)
             .toList();
     }
-    
-
-    private OrderStateHistoryEntity toEntity(OrderStateHistory history) {
-        OrderStateHistoryEntity e = new OrderStateHistoryEntity();
-        e.setOrderId(history.getOrderId());
-        e.setChangedAt(history.getChangedAt());
-        e.setHistoryId(history.getHistoryId());
-        e.setFromStatus(history.getFromStatus());
-        e.setToStatus(history.getToStatus());
-        return e;
-    }
-
-    private OrderStateHistory toDomain(OrderStateHistoryEntity e) {
-        return OrderStateHistory.restore(
-            e.getHistoryId(),
-            e.getOrderId(),
-            e.getFromStatus(),
-            e.getToStatus(),
-            e.getChangedAt()
-        );
-    }
-
 }
