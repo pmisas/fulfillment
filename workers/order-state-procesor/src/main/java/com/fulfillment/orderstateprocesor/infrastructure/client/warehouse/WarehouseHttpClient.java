@@ -1,5 +1,6 @@
 package com.fulfillment.orderstateprocesor.infrastructure.client.warehouse;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import com.fulfillment.orderstateprocesor.domain.ports.WarehouseClient;
-import com.fulfillment.orderstateprocesor.infrastructure.client.dto.WarehouseListResponse;
+import com.fulfillment.orderstateprocesor.infrastructure.client.warehouse.dto.WarehouseListResponse;
 
 @Component
 public class WarehouseHttpClient implements WarehouseClient {
@@ -29,13 +30,16 @@ public class WarehouseHttpClient implements WarehouseClient {
     }
 
     @Override
-    public List<String> listWarehouses() {
+    public List<WarehouseSummary> listWarehouses() {
         var arr = client.get()
             .uri("/api/v1/warehouses")
             .retrieve()
             .body(WarehouseListResponse[].class);
 
         if (arr == null) return List.of();
-        return java.util.Arrays.stream(arr).map(WarehouseListResponse::warehouseId).toList();
+        return Arrays.stream(arr)
+            .filter(w -> w.lat() != null && w.lng() != null)
+            .map(w -> new WarehouseSummary(w.warehouseId(), w.lat(), w.lng()))
+            .toList();
     }
 }
