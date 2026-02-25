@@ -46,7 +46,7 @@ public class DynamoStateHistoryRepositoryAdapter implements OrderStateHistoryRep
     private OrderStateHistoryEntity toEntity(OrderStateHistory history) {
         OrderStateHistoryEntity e = new OrderStateHistoryEntity();
         e.setOrderId(history.getOrderId());
-        e.setChangedAt(history.getchangedAt());
+        e.setChangedAt(history.getChangedAt());
         e.setHistoryId(history.getHistoryId());
         e.setFromStatus(history.getFromStatus());
         e.setToStatus(history.getToStatus());
