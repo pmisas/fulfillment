@@ -1,5 +1,7 @@
 package com.fulfillment.orderstateprocesor.infrastructure.client.inventory;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -7,6 +9,9 @@ import org.springframework.web.client.RestClientResponseException;
 
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AmountRequest;
+import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityRequest;
+import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityRequest.SkuQuantityDto;
+import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityResponse;
 
 @Component
 public class InventoryHttpClient implements InventoryClient {
@@ -41,5 +46,26 @@ public class InventoryHttpClient implements InventoryClient {
         } catch (RestClientResponseException ex) {
             throw ex;
         }
+    }
+
+    @Override
+    public AvailabilityResult checkAvailability(String warehouseId, List<SkuQuantity> items) {
+        List<SkuQuantityDto> dtoItems = items.stream()
+            .map(i -> new SkuQuantityDto(i.sku(), i.quantity()))
+            .toList();
+
+        AvailabilityResponse response = client.post()
+            .uri("/api/v1/warehouses/{warehouseId}/inventory/availability", warehouseId)
+            .body(new AvailabilityRequest(dtoItems))
+            .retrieve()
+            .body(AvailabilityResponse.class);
+
+        if (response == null) return new AvailabilityResult(false, List.of());
+
+        List<ItemAvailability> mapped = response.items().stream()
+            .map(i -> new ItemAvailability(i.sku(), i.required(), i.available(), i.canFulfill()))
+            .toList();
+
+        return new AvailabilityResult(response.canFulfillAll(), mapped);
     }
 }
