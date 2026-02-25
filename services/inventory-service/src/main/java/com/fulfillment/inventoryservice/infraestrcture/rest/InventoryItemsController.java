@@ -8,9 +8,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
+import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
+import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
 import com.fulfillment.inventoryservice.application.dto.InventoryCommand;
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.AmountRequest;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.CheckAvailabilityRequest;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.CheckAvailabilityResponse;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.InventoryItemResponse;
 
 import jakarta.validation.Valid;
@@ -80,6 +84,23 @@ public class InventoryItemsController {
         InventoryItem item = inventoryService.release(command);
 
         return InventoryRestMapper.toResponse(item);
+    }
+
+    @PostMapping("/warehouses/{warehouseId}/inventory/availability")
+    @ResponseStatus(HttpStatus.OK)
+    public CheckAvailabilityResponse checkAvailability(
+                    @PathVariable String warehouseId,
+                    @Valid @RequestBody CheckAvailabilityRequest req) {
+
+        List<AvailabilityQuery.SkuQuantity> items = req.items().stream()
+            .map(i -> new AvailabilityQuery.SkuQuantity(i.sku(), i.quantity()))
+            .toList();
+
+        AvailabilityResult result = inventoryService.checkAvailability(
+            new AvailabilityQuery(warehouseId, items)
+        );
+
+        return InventoryRestMapper.toAvailabilityResponse(result);
     }
 
     @GetMapping("/warehouse/{warehouseId}/inventory")

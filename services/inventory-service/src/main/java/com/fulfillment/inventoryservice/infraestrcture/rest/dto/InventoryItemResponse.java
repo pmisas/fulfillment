@@ -6,5 +6,7 @@ public record InventoryItemResponse(
     String warehouseId,
     String sku,
     int quantity,
+    int reserved,
+    int available,
     Instant updateAt
 ) {}
