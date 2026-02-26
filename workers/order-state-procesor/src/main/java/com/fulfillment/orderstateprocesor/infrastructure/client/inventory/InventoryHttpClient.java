@@ -5,13 +5,12 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
 
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
-import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AmountRequest;
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityRequest;
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityRequest.SkuQuantityDto;
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityResponse;
+import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.ReserveRequest;
 
 @Component
 public class InventoryHttpClient implements InventoryClient {
@@ -23,29 +22,30 @@ public class InventoryHttpClient implements InventoryClient {
     }
 
     @Override
-    public void reserve(String warehouseId, String sku, int amount) {
-        try {
-            client.post()
-                .uri("/api/v1/warehouses/{warehouseId}/inventory/{sku}/reserve", warehouseId, sku)
-                .body(new AmountRequest(amount))
-                .retrieve()
-                .toBodilessEntity();
-        } catch (RestClientResponseException ex) {
-            throw ex;
-        }
+    public ReserveResult reserveAll(String reservationId, String orderId, String warehouseId, List<SkuQuantity> items) {
+        List<ReserveRequest.SkuQuantityDto> dtoItems = items.stream()
+            .map(i -> new ReserveRequest.SkuQuantityDto(i.sku(), i.quantity()))
+            .toList();
+
+        return client.post()
+            .uri("/api/v1/warehouses/{warehouseId}/reservations", warehouseId)
+            .body(new ReserveRequest(reservationId, orderId, dtoItems))
+            .exchange((request, response) -> switch (response.getStatusCode().value()) {
+                case 201 -> ReserveResult.RESERVED;
+                case 200 -> ReserveResult.ALREADY_RESERVED;
+                case 422 -> ReserveResult.INSUFFICIENT_STOCK;
+                default  -> throw new IllegalStateException(
+                    "Unexpected status from inventory-service: " + response.getStatusCode()
+                );
+            });
     }
 
     @Override
-    public void release(String warehouseId, String sku, int amount) {
-        try {
-            client.post()
-                .uri("/api/v1/warehouses/{warehouseId}/inventory/{sku}/release", warehouseId, sku)
-                .body(new AmountRequest(amount))
-                .retrieve()
-                .toBodilessEntity();
-        } catch (RestClientResponseException ex) {
-            throw ex;
-        }
+    public void releaseReservation(String reservationId) {
+        client.delete()
+            .uri("/api/v1/reservations/{reservationId}", reservationId)
+            .retrieve()
+            .toBodilessEntity();
     }
 
     @Override

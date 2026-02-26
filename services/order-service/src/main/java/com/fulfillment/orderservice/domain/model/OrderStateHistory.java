@@ -23,8 +23,7 @@ public class OrderStateHistory {
             String orderId,
             Status fromStatus,
             Status toStatus,
-            Instant changedAt
-    ) {
+            Instant changedAt) {
         this.historyId = requireNonBlank(historyId, "historyId");
         this.orderId = requireNonBlank(orderId, "orderId");
         this.fromStatus = fromStatus;
@@ -33,10 +32,11 @@ public class OrderStateHistory {
     }
 
     public static OrderStateHistory createOrderStateHistory(
+                    String historyId,
                     String orderId) {
         Instant now = Instant.now();
         return new OrderStateHistory(
-            UUID.randomUUID().toString(),
+            historyId,
             orderId,
             null,
             Status.RECEIVED,
@@ -47,8 +47,7 @@ public class OrderStateHistory {
     public static OrderStateHistory transitionOrderStateHistory(
                     String orderId,
                     Status fromStatus,
-                    Status toStatus
-        ) {
+                    Status toStatus) {
         Instant now = Instant.now();
         Objects.requireNonNull(fromStatus, "fromStatus");
         if (fromStatus == toStatus) { throw new 
@@ -68,8 +67,7 @@ public class OrderStateHistory {
                 String orderId,
                 Status fromStatus, 
                 Status toStatus,
-                Instant changedAt
-    ) {
+                Instant changedAt) {
         return new OrderStateHistory(
             historyId, 
             orderId, 

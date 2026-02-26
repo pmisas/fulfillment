@@ -44,6 +44,7 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
         e.setWarehouseId(order.getWarehouseId() == null ? "" : order.getWarehouseId());
+
         e.setStatus(order.getStatus().name());
         e.setLat(order.getLat());
         e.setLng(order.getLng());
@@ -62,17 +63,28 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
     }
 
     private Order toDomain(OrderEntity e) {
-        var items = (e.getItems() == null ? java.util.List.<OrderItem>of()
+        java.util.List<OrderItem> items = (e.getItems() == null ? java.util.List.<OrderItem>of()
             : e.getItems().stream()
-                .map(i -> OrderItem.create(i.getSku(), i.getQuantity()))
+                .map(i -> OrderItem.createOrderItem(i.getSku(), i.getQuantity()))
                 .toList());
+
+        String warehouse = (e.getWarehouseId() == null || e.getWarehouseId().isBlank())
+                ? null
+                : e.getWarehouseId();
+
+        Double lat = e.getLat();
+        Double lng = e.getLng();
+
+        if (lat == null || lng == null) {
+            throw new IllegalStateException("Order " + e.getOrderId() + " has null lat/lng in DB");
+        }
 
         return Order.restore(
             e.getOrderId(),
-            e.getWarehouseId(),
+            warehouse,
             Status.valueOf(e.getStatus()),
-            e.getLat() != null ? e.getLat() : 0.0,
-            e.getLng() != null ? e.getLng() : 0.0,
+            lat,
+            lng,
             e.getCreatedAt(),
             e.getUpdatedAt(),
             items

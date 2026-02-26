@@ -4,8 +4,8 @@ import java.util.List;
 
 public interface InventoryClient {
 
-    void reserve(String warehouseId, String sku, int amount);
-    void release(String warehouseId, String sku, int amount);
+    ReserveResult reserveAll(String reservationId, String orderId, String warehouseId, List<SkuQuantity> items);
+    void releaseReservation(String reservationId);
     AvailabilityResult checkAvailability(String warehouseId, List<SkuQuantity> items);
 
     record SkuQuantity(String sku, int quantity) {}
@@ -21,4 +21,6 @@ public interface InventoryClient {
         int available,
         boolean canFulfill
     ) {}
+
+    enum ReserveResult { RESERVED, ALREADY_RESERVED, INSUFFICIENT_STOCK }
 }

@@ -64,16 +64,24 @@ public class OrderReceivedHandler implements OrderEventHandler {
             return;
         }
 
-        String selectedWarehouseId = chooseWarehouse(order);
-
-        if (order.getWarehouseId() == null || order.getWarehouseId().isBlank()) {
-            order = order.withWarehouse(selectedWarehouseId);
+        String wh = order.getWarehouseId();
+        if (wh != null && !wh.isBlank() && warehouseClient.existsById(wh)) {
+        } else {
+            wh = chooseWarehouse(order);
+            order = order.withWarehouse(wh);
             orderRepo.save(order);
         }
 
-        try {
-            reserveAll(order, selectedWarehouseId);
-        } catch (Exception ex) {
+        List<InventoryClient.SkuQuantity> skus = order.getItems().stream()
+            .map(i -> new InventoryClient.SkuQuantity(i.getSku(), i.getQuantity()))
+            .toList();
+
+        String reservationId = "resv:" + order.getOrderId();
+
+        InventoryClient.ReserveResult reserveResult =
+            inventoryClient.reserveAll(reservationId, order.getOrderId(), wh, skus);
+
+        if (reserveResult == InventoryClient.ReserveResult.INSUFFICIENT_STOCK) {
             Order rejected = order.withStatus(Status.REJECTED);
             orderRepo.save(rejected);
             historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED));
@@ -110,7 +118,6 @@ public class OrderReceivedHandler implements OrderEventHandler {
             InventoryClient.AvailabilityResult availability =
                 inventoryClient.checkAvailability(w.warehouseId(), skus);
 
-
             if (!availability.canFulfillAll()) continue;
 
             double minStockRatio = availability.items().stream()
@@ -138,7 +145,6 @@ public class OrderReceivedHandler implements OrderEventHandler {
             .id();
     }
 
-
     private double haversine(double lat1, double lng1, double lat2, double lng2) {
         final double R = 6371.0;
         double dLat = Math.toRadians(lat2 - lat1);
@@ -147,10 +153,6 @@ public class OrderReceivedHandler implements OrderEventHandler {
                  + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                  * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    private void reserveAll(Order order, String warehouseId) {
-        order.getItems().forEach(i -> inventoryClient.reserve(warehouseId, i.getSku(), i.getQuantity()));
     }
 
     private OrderReceivedEvent parse(String json) {

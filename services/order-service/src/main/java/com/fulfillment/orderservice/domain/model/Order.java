@@ -3,7 +3,6 @@ package com.fulfillment.orderservice.domain.model;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 
@@ -13,7 +12,7 @@ import lombok.Getter;
 public class Order {
 
     private final String orderId;
-    private final String werehouseId;
+    private final String warehouseId;
     private final Status status;
     private final double lat;
     private final double lng;
@@ -24,7 +23,7 @@ public class Order {
 
     private Order(
             String orderId,
-            String werehouseId,
+            String warehouseId,
             Status status,
             Instant createdAt,
             Instant updatedAt,
@@ -32,7 +31,7 @@ public class Order {
             double lng,
             List<OrderItem> items) {
         this.orderId = orderId;
-        this.werehouseId = werehouseId;
+        this.warehouseId = warehouseId;
         this.status = Objects.requireNonNull(status);
         this.lat = lat;
         this.lng = lng;
@@ -45,12 +44,13 @@ public class Order {
     }
 
     public static Order createOrder(
+                String orderId,
                 double lat,
                 double lng,
                 List<OrderItem> items) {
     Instant now = Instant.now();
     return new Order(
-            UUID.randomUUID().toString(),
+            orderId,
             null,
             Status.RECEIVED,
             now,
@@ -59,9 +59,7 @@ public class Order {
             lng,
             items
         );
-    }
-
-    
+    }  
 
     public Order withStatus(Status newStatus) {
         if (!this.status.canTransitionTo(newStatus)) {
@@ -69,7 +67,7 @@ public class Order {
         }
         return new Order(
             this.orderId,
-            this.werehouseId,
+            this.warehouseId,
             Objects.requireNonNull(newStatus),
             this.createdAt,
             Instant.now(),
@@ -78,10 +76,22 @@ public class Order {
             this.items
         );
     }
-
+     public Order withWarehouse(String warehouseId) {
+        return new Order(
+            this.orderId,
+            warehouseId,
+            this.status,
+            this.createdAt,
+            Instant.now(),
+            this.lat,
+            this.lng,
+            this.items
+        ); 
+    }
+    
     public static Order restore(
             String orderId,
-            String werehouseId,
+            String warehouseId,
             Status status,
             Instant createdAt,
             Instant updatedAt,
@@ -89,7 +99,7 @@ public class Order {
             double lng,
             List<OrderItem> items) {
         return new Order(
-            orderId, werehouseId, status, createdAt, updatedAt, lat, lng, items);
+            orderId, warehouseId, status, createdAt, updatedAt, lat, lng, items);
     }
 
 }

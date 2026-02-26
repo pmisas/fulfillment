@@ -22,7 +22,7 @@ public final class OrderEntityMapper {
     public static OrderEntity toEntity(Order order) {
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
-        e.setWarehouseId(order.getWerehouseId());
+        e.setWarehouseId(order.getWarehouseId());
         e.setStatus(order.getStatus().name());
         e.setCreatedAt(order.getCreatedAt());
         e.setUpdatedAt(order.getUpdatedAt());

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.application.dto.OrderReceivedEventPayload;
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
+import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderItem;
@@ -46,43 +47,40 @@ public class OrderServiceImpl implements OrderService {
 
         String normalizedKey = idempotencyKey.trim();
 
-        var existingOrderId = idempotencyStore.get(normalizedKey);
-        if (existingOrderId.isPresent()) {
-            String orderId = existingOrderId.get();
-            if (orderId.startsWith("PENDING:")) {
-                throw new IllegalStateException("Order creation in progress for this idempotency key");
-            }
-            return orderRepo.findById(orderId)
-                    .orElseThrow(() -> new IdempotencyInconsistentStateException(normalizedKey, orderId));
+        var existing = idempotencyStore.get(normalizedKey);
+        if (existing.isPresent()) {
+            return resolveExistingKey(normalizedKey, existing.get());
         }
+
+        return createNewOrder(command, normalizedKey);
+    }
+
+    private Order createNewOrder(CreateOrderCommand command, String normalizedKey) {
 
         String token = UUID.randomUUID().toString();
         boolean claimed = idempotencyStore.claimPending(normalizedKey, token, PENDING_TTL);
 
         if (!claimed) {
-            String v = idempotencyStore.get(normalizedKey).orElseThrow();
-            if (v.startsWith("PENDING:")) {
-                throw new IllegalStateException("Order creation in progress for this idempotency key");
-            }
-            return orderRepo.findById(v)
-                .orElseThrow(() -> new IdempotencyInconsistentStateException(normalizedKey, v));
+            String storedValue = idempotencyStore.get(normalizedKey).orElseThrow();
+            return resolveExistingKey(normalizedKey, storedValue);
         }
 
-        Order order = null;
-        try {
-            List<OrderItem> items = command.items().stream()
-                .map(i -> OrderItem.createOrderItem(i.sku(), i.quantity()))
-                .toList();
+        Order order;
 
-            order = Order.createOrder(command.lat(), command.lng(), items);
-            OrderStateHistory history = OrderStateHistory.createOrderStateHistory(order.getOrderId());
+        try {
+            order = buildNewOrder(command);
+
+            OrderStateHistory history =
+                    OrderStateHistory.createOrderStateHistory(
+                        UUID.randomUUID().toString(), 
+                        order.getOrderId());
 
             OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
-                UUID.randomUUID().toString(),
-                "ORDER",
-                order.getOrderId(),
-                "OrderReceived",
-                buildOrderReceivedPayload(order, command)
+                    UUID.randomUUID().toString(),
+                    "ORDER",
+                    order.getOrderId(),
+                    "OrderReceived",
+                    buildOrderReceivedPayload(order)
             );
 
             orderWriteTransaction.createOrderWithHistoryAndOutbox(order, history, outboxEvent);
@@ -92,12 +90,35 @@ public class OrderServiceImpl implements OrderService {
             throw e;
         }
 
-        boolean finalized = idempotencyStore.finalizeOrderId(normalizedKey, token, order.getOrderId(), IDEMPOTENCY_TTL);
+        boolean finalized = idempotencyStore.finalizeOrderId(
+                normalizedKey, token, order.getOrderId(), IDEMPOTENCY_TTL);
+
         if (!finalized) {
             throw new IdempotencyInconsistentStateException(normalizedKey, order.getOrderId());
         }
 
         return order;
+    }
+
+    private Order buildNewOrder(CreateOrderCommand command) {
+
+        String orderId = UUID.randomUUID().toString();
+
+        List<OrderItem> items = command.items().stream()
+                .map(i -> OrderItem.createOrderItem(i.sku(), i.quantity()))
+                .toList();
+
+        return Order.createOrder(orderId, command.lat(), command.lng(), items);
+    }
+
+    private Order resolveExistingKey(String normalizedKey, String storedValue) {
+        if (storedValue.startsWith("PENDING:")) {
+            throw new OrderCreationInProgressException(normalizedKey);
+        }
+
+        return orderRepo.findById(storedValue)
+                .orElseThrow(() ->
+                        new IdempotencyInconsistentStateException(normalizedKey, storedValue));
     }
 
     @Override
@@ -106,7 +127,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
     }
 
-    private String buildOrderReceivedPayload(Order order, CreateOrderCommand command) {
+    private String buildOrderReceivedPayload(Order order) {
         try {
             var payload = new OrderReceivedEventPayload(
                     order.getOrderId(),
@@ -121,4 +142,6 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalStateException("Failed to serialize OrderReceived payload: " + e.getMessage(), e);
         }
     }
+
+    
 }

@@ -5,12 +5,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 import lombok.Getter;
-import lombok.Setter;
 
 import static com.fulfillment.warehouseservice.domain.shared.DomainValidations.requireNonBlank;
 
 @Getter
-@Setter
 public class Warehouse {
     private final String warehouseId;
     private final String city;
@@ -25,9 +23,17 @@ public class Warehouse {
             double lng,
             Instant createdAt){
         this.warehouseId = requireNonBlank(warehouseId, "warehouseId");
-        this.city = requireNonBlank(city, "city");
-        this.lat = 0;
-        this.lng = 0;
+        this.city = requireNonBlank(city.trim().toLowerCase(), "city");
+
+        if (lat < -90 || lat > 90) 
+            throw new IllegalArgumentException("Latitude must be between -90 and 90");
+        
+        if (lng < -180 || lng > 180) {
+            throw new IllegalArgumentException("Longitude must be between -180 and 180");
+        }
+
+        this.lat = lat;
+        this.lng = lng;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
     }
 

@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
-import com.fulfillment.warehouseservice.domain.exception.WarehouseAlreadyExistsException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.WarehouseRepository;
@@ -21,11 +20,6 @@ public class WarehouseServiceImpl implements WarehouseService{
 
     @Override
     public Warehouse create(CreateWarehouseCommand command) {
-        repo.findByCity(command.city())
-            .ifPresent(w ->
-                {throw new WarehouseAlreadyExistsException(command.city());
-            });
-        
         Warehouse warehouse = Warehouse.createWarehouse(
                                 command.city(), 
                                 command.lat(), 

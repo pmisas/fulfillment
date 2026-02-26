@@ -5,33 +5,28 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.fulfillment.warehouseservice.domain.exception.WarehouseAlreadyExistsException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(WarehouseAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.CONFLICT) //devuelve 409
-    public String handleAlreadyExists(WarehouseAlreadyExistsException ex) {
-        return ex.getMessage();
-    }
 
-    @ExceptionHandler(WarehouseNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND) //devuelve 404
-    public String handleNotFound(WarehouseNotFoundException ex) {
-        return ex.getMessage();
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST) //400
-    public String handleIllegalArg(IllegalArgumentException ex) {
+  @ExceptionHandler(WarehouseNotFoundException.class)
+  @ResponseStatus(HttpStatus.NOT_FOUND) //devuelve 404
+  public String handleNotFound(WarehouseNotFoundException ex) {
       return ex.getMessage();
-    }
+  }
 
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) //500
-    public String handleGeneric(Exception ex) {
-      return "Unexpected error"+ ex;
-    }
+  @ExceptionHandler(IllegalArgumentException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST) //400
+  public String handleIllegalArg(IllegalArgumentException ex) {
+    return ex.getMessage();
+  }
+
+  @ExceptionHandler(Exception.class)
+  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) //500
+  public String handleGeneric(Exception ex) {
+    return "Unexpected error"+ ex;
+  }
+  
 }
