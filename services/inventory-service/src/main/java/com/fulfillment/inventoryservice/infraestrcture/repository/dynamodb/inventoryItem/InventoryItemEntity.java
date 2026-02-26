@@ -1,4 +1,4 @@
-package com.fulfillment.inventoryservice.infraestrcture.repository.dynamodb;
+package com.fulfillment.inventoryservice.infraestrcture.repository.dynamodb.inventoryItem;
 
 import java.time.Instant;
 

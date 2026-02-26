@@ -1,71 +1,69 @@
 ﻿package com.fulfillment.inventoryservice.application;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
-import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
+import com.fulfillment.inventoryservice.application.dto.*;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityResult.ItemAvailability;
-import com.fulfillment.inventoryservice.application.dto.InventoryCommand;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
+import com.fulfillment.inventoryservice.domain.model.InventoryReservation;
 import com.fulfillment.inventoryservice.domain.ports.InventoryItemsRepository;
+import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction;
+import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction.ConsumeResult;
+import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction.ReserveResult;
+import com.fulfillment.inventoryservice.domain.ports.InventoryRestockTransaction;
+import com.fulfillment.inventoryservice.domain.ports.WarehouseClient;
 
 @Service
 public class InventoryItemsServiceImpl implements InventoryItemsService {
 
     private final InventoryItemsRepository repo;
+    private final InventoryReservationTransaction reservationTx;
+    private final InventoryRestockTransaction restockTx;
+    private final WarehouseClient warehouseClient;
 
-    public InventoryItemsServiceImpl(InventoryItemsRepository repo) {
+    public InventoryItemsServiceImpl(
+        InventoryItemsRepository repo,
+        InventoryReservationTransaction reservationTx,
+        InventoryRestockTransaction restockTx,
+        WarehouseClient warehouseClient) {
         this.repo = repo;
+        this.reservationTx = reservationTx;
+        this.restockTx = restockTx;
+        this.warehouseClient = warehouseClient;
     }
 
     @Override
-    public InventoryItem consume(InventoryCommand command) {
-        InventoryItem current = repo.findById(command.warehouseId(), command.sku())
-                                .orElseThrow(() ->
-                                    new IllegalArgumentException("Inventory item not found: warehouseId "
-                                    + command.warehouseId() + " sku " + command.sku())
-                                );
-        return repo.save(current.consume(command.amount()));
+    public ConsumeResult consumeReservation(ConsumeReservationCommand command) {
+        return reservationTx.consumeAtomically(command.reservationId());
     }
 
     @Override
-    public InventoryItem restock(InventoryCommand command) {
-        String warehouseId = command.warehouseId();
-        String sku = command.sku();
-
-        var existing = repo.findById(warehouseId, sku);
-
-        if (existing.isEmpty()) {
-            throw new WarehouseNotFoundException(warehouseId);
+    public List<InventoryItem> restockBatch(RestockBatchCommand command) {
+     
+        if (!warehouseClient.existsById(command.warehouseId())) {
+            throw new WarehouseNotFoundException(command.warehouseId());
+        }
+        
+        Map<String, Integer> summed = new HashMap<>();
+        for (var item : command.items()) {
+            if (item.quantity() <= 0) throw new IllegalArgumentException("quantity must be > 0");
+            summed.merge(item.sku(), item.quantity(), Integer::sum);
         }
 
-        return repo.save(existing.get().restock(command.amount()));
-    }
+        List<InventoryRestockTransaction.Item> txItems = summed.entrySet().stream()
+            .map(e -> new InventoryRestockTransaction.Item(e.getKey(), e.getValue()))
+            .toList();
 
-    @Override
-    public InventoryItem reserve(InventoryCommand command) {
-        InventoryItem current = repo.findById(command.warehouseId(), command.sku())
-                                .orElseThrow(() ->
-                                    new IllegalArgumentException("Inventory item not found: warehouseId "
-                                    + command.warehouseId() + " sku " + command.sku())
-                                );
-        return repo.save(current.reserve(command.amount()));
-    }
+        restockTx.restockAtomically(command.warehouseId(), txItems);
 
-    @Override
-    public InventoryItem release(InventoryCommand command) {
-        InventoryItem current = repo.findById(command.warehouseId(), command.sku())
-                                .orElseThrow(() ->
-                                    new IllegalArgumentException("Inventory item not found: warehouseId "
-                                    + command.warehouseId() + " sku " + command.sku())
-                                );
-        return repo.save(current.release(command.amount()));
+        return repo.findByWarehouseId(command.warehouseId());
     }
 
     @Override
@@ -87,11 +85,12 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
         List<ItemAvailability> itemResults = new ArrayList<>();
         boolean canFulfillAll = true;
 
-        for (AvailabilityQuery.SkuQuantity requested : query.items()) {
+        for (SkuQuantity requested : query.items()) {
             InventoryItem stock = stockBySku.get(requested.sku());
             int available = (stock != null) ? stock.available() : 0;
             boolean canFulfill = available >= requested.quantity();
 
+            canFulfillAll = canFulfillAll && canFulfill;
 
             itemResults.add(new ItemAvailability(
                 requested.sku(),
@@ -103,4 +102,26 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
 
         return new AvailabilityResult(canFulfillAll, itemResults);
     }
+
+    @Override
+    public ReserveResult reserveItems(ReserveBatchCommand command) {
+        List<InventoryReservation.Item> items = command.items().stream()
+            .map(i -> new InventoryReservation.Item(i.sku(), i.quantity()))
+            .toList();
+
+        InventoryReservation reservation = InventoryReservation.createInventoryReservation(
+            command.reservationId(),
+            command.orderId(),
+            command.warehouseId(),
+            items
+        );
+
+        return reservationTx.reserveAtomically(reservation);
+    }
+
+    @Override
+    public void releaseReservation(String reservationId) {
+        reservationTx.releaseAtomically(reservationId);
+    }
+
 }

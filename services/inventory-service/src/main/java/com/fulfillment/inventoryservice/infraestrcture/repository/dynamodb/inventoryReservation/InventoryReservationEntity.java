@@ -1,6 +1,5 @@
-package com.fulfillment.orderstateprocesor.infrastructure.repository.dynamodb.order;
+package com.fulfillment.inventoryservice.infraestrcture.repository.dynamodb.inventoryReservation;
 
-import java.time.Instant;
 import java.util.List;
 
 import lombok.Getter;
@@ -13,21 +12,14 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @Setter
 @NoArgsConstructor
 @DynamoDbBean
-public class OrderEntity {
-
+public class InventoryReservationEntity {
+    private String reservationId;
     private String orderId;
     private String warehouseId;
-    private String status; 
-    private Instant createdAt;
-    private Instant updatedAt;
-    private Double lat;
-    private Double lng;
-    private List<Item> items;
+    private Long createdAtMs;
+    private Long ttl;
 
-    @DynamoDbPartitionKey
-    public String getOrderId() { 
-        return orderId; 
-    }
+    private List<Item> items;
 
     @Getter
     @Setter
@@ -36,6 +28,9 @@ public class OrderEntity {
     public static class Item {
         private String sku;
         private Integer quantity;
-
     }
+
+    @DynamoDbPartitionKey
+    public String getReservationId() { return reservationId; }
+
 }

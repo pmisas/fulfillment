@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
   guarda como JSON en OutboxEvents.payload
   y luego viaja como MessageBody en SQS para que lo consuma el OrderStateProcessor.
  
-  Ejemplo:
+  Ej:
   {
     "orderId": "order-123",
     "lat": 4.7110,
@@ -17,7 +17,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
       {"sku":"SKU-1","quantity":2}
     ]
   }
- */
+*/
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record OrderReceivedEventPayload(

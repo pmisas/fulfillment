@@ -4,8 +4,7 @@ import java.util.List;
 
 public record AvailabilityResult(
     boolean canFulfillAll,
-    List<ItemAvailability> items
-) {
+    List<ItemAvailability> items) {
     public record ItemAvailability(
         String sku,
         int required,

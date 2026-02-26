@@ -33,7 +33,7 @@ public class WarehouseController {
 
     @PostMapping()
     @ResponseStatus(HttpStatus.CREATED)
-    public WarehouseResponse createWarehouses(
+    public WarehouseResponse createWarehouse(
             @Valid @RequestBody CreateWarehouseRequest req) {
         CreateWarehouseCommand command = WarehouseRestMapper.toCommand(req);
         Warehouse warehouse = warehouseService.create(command);

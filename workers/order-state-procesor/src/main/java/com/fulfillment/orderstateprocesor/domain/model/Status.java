@@ -24,3 +24,4 @@ public enum Status {
         return ALLOWED.getOrDefault(this, Set.of()).contains(next);
     }
 }
+
