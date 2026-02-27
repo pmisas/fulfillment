@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb;
+package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.config;
 
 import java.net.URI;
 

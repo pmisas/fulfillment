@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb;
+package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.warehouse;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.WarehouseRepository;
+import com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.WarehouseEntityMapper;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -16,11 +17,11 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
 @Profile("cloud")
-public class DynamoRepositoryAdapter implements WarehouseRepository{
+public class DynamoWarehouseRepositoryAdapter implements WarehouseRepository{
     
     private final DynamoDbTable<WarehouseEntity> table;
 
-    public DynamoRepositoryAdapter(
+    public DynamoWarehouseRepositoryAdapter(
                 DynamoDbEnhancedClient enhancedClient,
                 @Value("${aws.dynamodb.warehouses-table}") String tableName) {
         this.table = enhancedClient.table(tableName, 
@@ -29,7 +30,7 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
 
     @Override
     public Warehouse save(Warehouse warehouse) {
-        table.putItem(toEntity(warehouse));
+        table.putItem(WarehouseEntityMapper.toEntity(warehouse));
         return warehouse;
     }
 
@@ -37,7 +38,7 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
     public Optional<Warehouse> findById(String warehouseId) {
         WarehouseEntity entity = table.getItem(r -> r.key(k -> k.partitionValue(warehouseId)));
 
-        return Optional.ofNullable(entity).map(this::toDomain);
+        return Optional.ofNullable(entity).map(WarehouseEntityMapper::toDomain);
     }
 
     @Override
@@ -45,7 +46,7 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
             return table.scan()
             .items()
             .stream()
-            .map(this::toDomain)
+            .map(WarehouseEntityMapper::toDomain)
             .toList();
     }
 
@@ -56,7 +57,7 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
             .stream()
             .filter(e -> e.getCity().equals(city))
             .findFirst()
-            .map(this::toDomain);
+            .map(WarehouseEntityMapper::toDomain);
     }
 
     @Override
@@ -76,26 +77,5 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
         return entity != null;
     }
 
-
-    private WarehouseEntity toEntity(Warehouse warehouse) {
-        WarehouseEntity e = new WarehouseEntity();
-        e.setWarehouseId(warehouse.getWarehouseId());
-        e.setCity(warehouse.getCity());
-        e.setLat(warehouse.getLat());
-        e.setLng(warehouse.getLng());
-        e.setCreatedAt(warehouse.getCreatedAt());
-
-        return e;
-    }
-
-    private Warehouse toDomain(WarehouseEntity e) {
-        return Warehouse.restore(
-            e.getWarehouseId(),
-            e.getCity(),
-            e.getLat(),
-            e.getLng(),
-            e.getCreatedAt()
-        );
-    }
 
 }
