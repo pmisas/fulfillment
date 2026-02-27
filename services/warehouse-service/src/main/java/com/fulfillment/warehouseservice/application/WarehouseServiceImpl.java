@@ -1,7 +1,6 @@
 package com.fulfillment.warehouseservice.application;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -20,10 +19,6 @@ import static com.fulfillment.warehouseservice.domain.shared.DomainValidations.r
 @Service
 public class WarehouseServiceImpl implements WarehouseService{
 
-    private static final String AGGREGATE_TYPE = "WAREHOUSE";
-    private static final String PICKING_STARTED_EVENT = "PickingStarted";
-    private static final String PACKING_STARTED_EVENT = "PackingStarted";
-    
     private final WarehouseRepository warehouseRepo;
     private final OutboxEventsRepository outboxRepo;
     private final ObjectMapper mapper;
@@ -71,12 +66,12 @@ public class WarehouseServiceImpl implements WarehouseService{
 
     @Override
     public void startPicking(WarehouseStartFlowCommand command) {
-        publishWarehouseFlowEvent(command, PICKING_STARTED_EVENT);
+        publishWarehouseFlowEvent(command, "PickingStarted");
     }
 
     @Override
     public void startPacking(WarehouseStartFlowCommand command) {
-        publishWarehouseFlowEvent(command, PACKING_STARTED_EVENT);
+        publishWarehouseFlowEvent(command, "PackingStarted");
     }
 
     private void publishWarehouseFlowEvent(WarehouseStartFlowCommand command, String eventType) {
@@ -86,16 +81,18 @@ public class WarehouseServiceImpl implements WarehouseService{
         if (!warehouseRepo.existsById(warehouseId)) {
             throw new WarehouseNotFoundException(warehouseId);
         }
+    
+        String eventId = eventType + ":" + orderId;
 
         OutboxPendingEvent pendingEvent = new OutboxPendingEvent(
-                UUID.randomUUID().toString(),
-                AGGREGATE_TYPE,
-                warehouseId,
-                eventType,
-                buildWarehouseOrderActionPayload(orderId, warehouseId)
+            eventId,
+            "ORDER",
+            orderId,
+            eventType,
+            buildWarehouseOrderActionPayload(orderId, warehouseId)
         );
 
-        outboxRepo.savePending(pendingEvent);
+        outboxRepo.savePendingIfAbsent(pendingEvent);
     }
 
     private String buildWarehouseOrderActionPayload(String orderId, String warehouseId) {

@@ -1,7 +1,11 @@
 package com.fulfillment.warehouseservice.domain.port;
 
 public interface OutboxEventsRepository {
-    void savePending(OutboxPendingEvent event);
+
+    /**
+     * @return true si se insertó (nuevo), false si ya existía el eventId (idempotente).
+     */
+    boolean savePendingIfAbsent(OutboxPendingEvent event);
 
     record OutboxPendingEvent(
         String eventId,

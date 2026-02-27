@@ -9,11 +9,17 @@ import com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.Wareh
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 @Repository
 @Profile("cloud")
 public class DynamoOutboxEventRepositoryAdapter implements OutboxEventsRepository {
+
+    private static final Expression EVENT_MUST_NOT_EXIST =
+        Expression.builder().expression("attribute_not_exists(eventId)").build();
 
     private final DynamoDbTable<OutboxEventEntity> table;
 
@@ -25,7 +31,17 @@ public class DynamoOutboxEventRepositoryAdapter implements OutboxEventsRepositor
     }
 
     @Override
-    public void savePending(OutboxPendingEvent event) {
-        table.putItem(WarehouseEntityMapper.toEntity(event));
+    public boolean savePendingIfAbsent(OutboxPendingEvent event) {
+        try {
+            var req = PutItemEnhancedRequest.builder(OutboxEventEntity.class)
+                .item(WarehouseEntityMapper.toEntity(event))
+                .conditionExpression(EVENT_MUST_NOT_EXIST)
+                .build();
+
+            table.putItem(req);
+            return true;
+        } catch (ConditionalCheckFailedException e) {
+            return false; // ya existía
+        }
     }
 }

@@ -75,11 +75,14 @@ public class OrderServiceImpl implements OrderService {
                         UUID.randomUUID().toString(), 
                         order.getOrderId());
 
+            String eventType = "OrderReceived";
+            String eventId = "ORDER:" + order.getOrderId() + ":" + eventType;
+
             OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
-                    UUID.randomUUID().toString(),
+                    eventId,
                     "ORDER",
                     order.getOrderId(),
-                    "OrderReceived",
+                    eventType,
                     buildOrderReceivedPayload(order)
             );
 
