@@ -78,7 +78,11 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
 
     @Override
     public AvailabilityResult checkAvailability(AvailabilityQuery query) {
-        Map<String, InventoryItem> stockBySku = repo.findByWarehouseId(query.warehouseId())
+        List<String> requestedSkus = query.items().stream()
+            .map(SkuQuantity::sku)
+            .toList();
+
+        Map<String, InventoryItem> stockBySku = repo.findBySkus(query.warehouseId(), requestedSkus)
             .stream()
             .collect(Collectors.toMap(InventoryItem::getSku, i -> i));
 

@@ -1,6 +1,8 @@
 package com.fulfillment.orderstateprocesor.application.handler;
 
+import reactor.core.publisher.Mono;
+
 public interface OrderEventHandler {
-    String eventType();          
-    void handle(String payload); 
+    String eventType();
+    Mono<Void> handle(String payload);
 }

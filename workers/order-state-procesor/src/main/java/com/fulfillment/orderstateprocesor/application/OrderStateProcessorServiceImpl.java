@@ -11,6 +11,7 @@ import com.fulfillment.orderstateprocesor.application.handler.OrderEventHandler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 @Service
 public class OrderStateProcessorServiceImpl implements OrderStateProcessorService {
@@ -25,12 +26,12 @@ public class OrderStateProcessorServiceImpl implements OrderStateProcessorServic
     }
 
     @Override
-    public void process(ProcessEventCommand command) {
+    public Mono<Void> process(ProcessEventCommand command) {
         OrderEventHandler handler = handlers.get(command.eventType());
         if (handler == null) {
             log.warn("No handler registered for event type: {}", command.eventType());
-            return;
+            return Mono.empty();
         }
-        handler.handle(command.payload());
+        return handler.handle(command.payload());
     }
 }

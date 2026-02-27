@@ -1,27 +1,31 @@
 package com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.fulfillment.orderstateprocesor.application.OrderStateProcessorService;
 import com.fulfillment.orderstateprocesor.application.dto.ProcessEventCommand;
 
-import software.amazon.awssdk.services.sqs.SqsClient;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.*;
 
 @Component
-@EnableScheduling
 public class SqsMessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(SqsMessageListener.class);
 
-    private final SqsClient sqs;
+    private final SqsAsyncClient sqsAsync;
     private final OrderStateProcessorService processor;
     private final SqsMessageMapper mapper;
 
@@ -29,68 +33,84 @@ public class SqsMessageListener {
     private final int waitTimeSeconds;
     private final int maxMessages;
     private final int visibilityTimeoutSeconds;
+    private final int maxConcurrentProcessing;
+
+    private Disposable subscription;
 
     public SqsMessageListener(
-        SqsClient sqs,
+        SqsAsyncClient sqsAsync,
         OrderStateProcessorService processor,
         SqsMessageMapper mapper,
         @Value("${aws.sqs.queueUrl}") String queueUrl,
         @Value("${aws.sqs.waitTimeSeconds:10}") int waitTimeSeconds,
         @Value("${aws.sqs.maxMessages:10}") int maxMessages,
-        @Value("${aws.sqs.visibilityTimeoutSeconds:30}") int visibilityTimeoutSeconds
+        @Value("${aws.sqs.visibilityTimeoutSeconds:30}") int visibilityTimeoutSeconds,
+        @Value("${worker.maxConcurrentProcessing:5}") int maxConcurrentProcessing
     ) {
-        this.sqs = sqs;
+        this.sqsAsync = sqsAsync;
         this.processor = processor;
         this.mapper = mapper;
         this.queueUrl = queueUrl;
         this.waitTimeSeconds = waitTimeSeconds;
         this.maxMessages = maxMessages;
         this.visibilityTimeoutSeconds = visibilityTimeoutSeconds;
+        this.maxConcurrentProcessing = maxConcurrentProcessing;
     }
 
-    @Scheduled(fixedDelayString = "${worker.poll.fixedDelayMs:1000}")
-    public void poll() {
-        try {
-            ReceiveMessageRequest req = ReceiveMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .waitTimeSeconds(waitTimeSeconds)
-                .maxNumberOfMessages(maxMessages)
-                .visibilityTimeout(visibilityTimeoutSeconds)
-                .messageAttributeNames("All")
-                .build();
+    @PostConstruct
+    public void start() {
+        subscription = pollLoop()
+            .repeat()
+            .retryWhen(Retry
+                .backoff(Long.MAX_VALUE, Duration.ofSeconds(1))
+                .maxBackoff(Duration.ofSeconds(30))
+                .doBeforeRetry(signal ->
+                    log.warn("SQS poll error, retrying: {}", signal.failure().getMessage())))
+            .subscribe();
+        log.info("Reactive SQS listener started for queue: {}", queueUrl);
+    }
 
-            ReceiveMessageResponse resp = sqs.receiveMessage(req);
-            List<Message> messages = resp.messages();
-            if (messages == null || messages.isEmpty()) return;
-
-            for (Message m : messages) {
-                boolean ok = handleOne(m);
-                if (ok) {
-                    delete(m);
-                } else {
-                }
-            }
-        } catch (Exception e) {
-            log.error("SQS poll error", e);
+    @PreDestroy
+    public void stop() {
+        if (subscription != null && !subscription.isDisposed()) {
+            subscription.dispose();
+            log.info("Reactive SQS listener stopped");
         }
     }
 
-    private boolean handleOne(Message msg) {
-        try {
-            ProcessEventCommand cmd = mapper.toCommand(msg);
-            processor.process(cmd);
-            return true;
-        } catch (Exception ex) {
-            log.error("Failed processing messageId={} err={}", msg.messageId(), ex.getMessage(), ex);
-            return false;
-        }
+    private Mono<Void> pollLoop() {
+        ReceiveMessageRequest req = ReceiveMessageRequest.builder()
+            .queueUrl(queueUrl)
+            .waitTimeSeconds(waitTimeSeconds)
+            .maxNumberOfMessages(maxMessages)
+            .visibilityTimeout(visibilityTimeoutSeconds)
+            .messageAttributeNames("All")
+            .build();
+
+        return Mono.fromFuture(() -> sqsAsync.receiveMessage(req))
+            .flatMapMany(resp -> Flux.fromIterable(
+                resp.messages() != null ? resp.messages() : List.of()))
+            .flatMap(this::processAndDelete, maxConcurrentProcessing)
+            .then();
     }
 
-    private void delete(Message msg) {
+    private Mono<Void> processAndDelete(Message msg) {
+        return Mono.defer(() -> {
+                ProcessEventCommand cmd = mapper.toCommand(msg);
+                return processor.process(cmd);
+            })
+            .then(deleteMessage(msg))
+            .onErrorResume(ex -> {
+                log.error("Failed processing messageId={}: {}", msg.messageId(), ex.getMessage(), ex);
+                return Mono.empty();
+            });
+    }
+
+    private Mono<Void> deleteMessage(Message msg) {
         DeleteMessageRequest del = DeleteMessageRequest.builder()
             .queueUrl(queueUrl)
             .receiptHandle(msg.receiptHandle())
             .build();
-        sqs.deleteMessage(del);
+        return Mono.fromFuture(() -> sqsAsync.deleteMessage(del)).then();
     }
 }

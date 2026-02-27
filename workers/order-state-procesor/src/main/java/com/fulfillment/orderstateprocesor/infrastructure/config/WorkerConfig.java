@@ -5,14 +5,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 @Configuration
 public class WorkerConfig {
 
     @Bean
-    SqsClient sqsClient(@Value("${aws.region}") String region) {
-        return SqsClient.builder()
+    SqsAsyncClient sqsAsyncClient(@Value("${aws.region}") String region) {
+        return SqsAsyncClient.builder()
             .region(Region.of(region))
             .build();
     }

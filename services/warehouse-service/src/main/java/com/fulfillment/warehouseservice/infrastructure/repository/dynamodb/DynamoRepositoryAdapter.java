@@ -61,7 +61,7 @@ public class DynamoRepositoryAdapter implements WarehouseRepository{
 
     @Override
     public boolean existsAny() {
-            return table.scan()
+        return table.scan(r -> r.limit(1))
             .items()
             .stream()
             .findAny()

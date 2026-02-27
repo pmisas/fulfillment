@@ -14,18 +14,22 @@ import com.fulfillment.inventoryservice.domain.ports.InventoryItemsRepository;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 
 @Repository
 @Profile("cloud")
 public class DynamoInventoryItemsRepositoryAdapter implements InventoryItemsRepository {
 
+    private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<InventoryItemEntity> table;
 
     public DynamoInventoryItemsRepositoryAdapter(
         DynamoDbEnhancedClient enhancedClient,
         @Value("${aws.dynamodb.inventory-table}") String tableName
     ) {
+        this.enhancedClient = enhancedClient;
         this.table = enhancedClient.table(tableName, TableSchema.fromBean(InventoryItemEntity.class));
     }
 
@@ -56,6 +60,28 @@ public class DynamoInventoryItemsRepositoryAdapter implements InventoryItemsRepo
             .forEach(result::add);
 
         return result;
+    }
+
+    @Override
+    public List<InventoryItem> findBySkus(String warehouseId, List<String> skus) {
+        if (skus == null || skus.isEmpty()) return List.of();
+
+        ReadBatch.Builder<InventoryItemEntity> readBatchBuilder = ReadBatch.builder(InventoryItemEntity.class)
+            .mappedTableResource(table);
+
+        for (String sku : skus) {
+            readBatchBuilder.addGetItem(r -> r.key(k -> k.partitionValue(warehouseId).sortValue(sku)));
+        }
+
+        BatchGetItemEnhancedRequest request = BatchGetItemEnhancedRequest.builder()
+            .readBatches(readBatchBuilder.build())
+            .build();
+
+        return enhancedClient.batchGetItem(request)
+            .resultsForTable(table)
+            .stream()
+            .map(this::toDomain)
+            .toList();
     }
 
     @Override

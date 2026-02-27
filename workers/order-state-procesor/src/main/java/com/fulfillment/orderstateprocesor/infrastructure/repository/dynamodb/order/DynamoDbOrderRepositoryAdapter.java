@@ -1,7 +1,5 @@
 package com.fulfillment.orderstateprocesor.infrastructure.repository.dynamodb.order;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
@@ -11,33 +9,36 @@ import com.fulfillment.orderstateprocesor.domain.model.OrderItem;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
 @Profile("cloud")
 public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
 
-    private final DynamoDbTable<OrderEntity> table;
+    private final DynamoDbAsyncTable<OrderEntity> table;
 
     public DynamoDbOrderRepositoryAdapter(
-        DynamoDbEnhancedClient enhancedClient,
+        DynamoDbEnhancedAsyncClient enhancedAsyncClient,
         @Value("${aws.dynamodb.ordersTable}") String tableName
     ) {
-        this.table = enhancedClient.table(tableName, TableSchema.fromBean(OrderEntity.class));
+        this.table = enhancedAsyncClient.table(tableName, TableSchema.fromBean(OrderEntity.class));
     }
 
     @Override
-    public Order save(Order order) {
-        table.putItem(toEntity(order));
-        return order;
+    public Mono<Order> save(Order order) {
+        return Mono.fromFuture(() -> table.putItem(toEntity(order)))
+            .thenReturn(order);
     }
 
     @Override
-    public Optional<Order> findById(String orderId) {
-        OrderEntity entity = table.getItem(r -> r.key(k -> k.partitionValue(orderId)));
-        return Optional.ofNullable(entity).map(this::toDomain);
+    public Mono<Order> findById(String orderId) {
+        Key key = Key.builder().partitionValue(orderId).build();
+        return Mono.fromFuture(() -> table.getItem(key))
+            .map(this::toDomain);
     }
 
     private OrderEntity toEntity(Order order) {

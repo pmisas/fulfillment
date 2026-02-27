@@ -2,10 +2,12 @@ package com.fulfillment.orderstateprocesor.domain.ports;
 
 import java.util.List;
 
+import reactor.core.publisher.Mono;
+
 public interface WarehouseClient {
 
-    boolean existsById(String warehouseId);
-    List<WarehouseSummary> listWarehouses();
+    Mono<Boolean> existsById(String warehouseId);
+    Mono<List<WarehouseSummary>> listWarehouses();
 
     record WarehouseSummary(String warehouseId, double lat, double lng) {}
 }

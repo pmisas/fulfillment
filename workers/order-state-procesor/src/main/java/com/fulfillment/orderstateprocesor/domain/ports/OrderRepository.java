@@ -1,9 +1,10 @@
 package com.fulfillment.orderstateprocesor.domain.ports;
 
-import java.util.Optional;
 import com.fulfillment.orderstateprocesor.domain.model.Order;
 
+import reactor.core.publisher.Mono;
+
 public interface OrderRepository {
-    Optional<Order> findById(String orderId);
-    Order save(Order order);
+    Mono<Order> findById(String orderId);
+    Mono<Order> save(Order order);
 }

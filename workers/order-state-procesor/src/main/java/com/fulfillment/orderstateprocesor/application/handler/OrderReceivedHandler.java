@@ -1,9 +1,10 @@
 package com.fulfillment.orderstateprocesor.application.handler;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,22 +13,30 @@ import com.fulfillment.orderstateprocesor.domain.model.Order;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
+import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient.AvailabilityResult;
+import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient.ReserveResult;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
 import com.fulfillment.orderstateprocesor.domain.ports.WarehouseClient;
+import com.fulfillment.orderstateprocesor.domain.ports.WarehouseClient.WarehouseSummary;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.OrderReceivedEvent;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import static com.fulfillment.orderstateprocesor.domain.shared.DomainValidations.requireNonBlank;
 
 @Component
 public class OrderReceivedHandler implements OrderEventHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderReceivedHandler.class);
+
     private static final double DISTANCE_WEIGHT       = 0.6;
     private static final double STOCK_BUFFER_FACTOR   = 2.0;
     private static final double RESERVATION_THRESHOLD = 0.3;
+    private static final int    MAX_CONCURRENT_CHECKS = 5;
 
     private final ObjectMapper mapper;
-
     private final OrderRepository orderRepo;
     private final OrderStateHistoryRepository historyRepo;
     private final WarehouseClient warehouseClient;
@@ -53,96 +62,119 @@ public class OrderReceivedHandler implements OrderEventHandler {
     }
 
     @Override
-    public void handle(String payload) {
+    public Mono<Void> handle(String payload) {
         OrderReceivedEvent event = parse(payload);
         String orderId = requireNonBlank(event.orderId(), "orderId");
 
-        Order order = orderRepo.findById(orderId)
-            .orElseThrow(() -> new OrderNotFoundException(orderId));
-
-        if (order.getStatus() != Status.RECEIVED) {
-            return;
-        }
-
-        String wh = order.getWarehouseId();
-        if (wh != null && !wh.isBlank() && warehouseClient.existsById(wh)) {
-        } else {
-            wh = chooseWarehouse(order);
-            order = order.withWarehouse(wh);
-            orderRepo.save(order);
-        }
-
-        List<InventoryClient.SkuQuantity> skus = order.getItems().stream()
-            .map(i -> new InventoryClient.SkuQuantity(i.getSku(), i.getQuantity()))
-            .toList();
-
-        String reservationId = "resv:" + order.getOrderId();
-
-        InventoryClient.ReserveResult reserveResult =
-            inventoryClient.reserveAll(reservationId, order.getOrderId(), wh, skus);
-
-        if (reserveResult == InventoryClient.ReserveResult.INSUFFICIENT_STOCK) {
-            Order rejected = order.withStatus(Status.REJECTED);
-            orderRepo.save(rejected);
-            historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED));
-            return;
-        }
-
-        Order validated = order.withStatus(Status.VALIDATED);
-        orderRepo.save(validated);
-        historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.VALIDATED));
+        return orderRepo.findById(orderId)
+            .switchIfEmpty(Mono.error(new OrderNotFoundException(orderId)))
+            .filter(order -> order.getStatus() == Status.RECEIVED)
+            .flatMap(this::rankAndReserveWithFallback)
+            .then();
     }
 
-    private String chooseWarehouse(Order order) {
-        String existing = order.getWarehouseId();
-        if (existing != null && !existing.isBlank() && warehouseClient.existsById(existing)) {
-            return existing;
-        }
+    private Mono<Void> rankAndReserveWithFallback(Order order) {
+        List<InventoryClient.SkuQuantity> skus = toSkuQuantities(order);
+        String reservationId = "resv:" + order.getOrderId();
 
-        List<WarehouseClient.WarehouseSummary> warehouses = warehouseClient.listWarehouses();
-        if (warehouses.isEmpty()) throw new IllegalStateException("No warehouses available");
+        return rankWarehouses(order, skus)
+            .flatMap(rankedIds -> tryReserveInOrder(rankedIds, reservationId, order, skus))
+            .flatMap(warehouseId -> persistValidated(order, warehouseId))
+            .switchIfEmpty(persistRejected(order));
+    }
 
-        List<InventoryClient.SkuQuantity> skus = order.getItems().stream()
+    private Mono<String> tryReserveInOrder(List<String> rankedWarehouseIds,
+                                            String reservationId,
+                                            Order order,
+                                            List<InventoryClient.SkuQuantity> skus) {
+        return Flux.fromIterable(rankedWarehouseIds)
+            .concatMap(warehouseId ->
+                inventoryClient.reserveAll(reservationId, order.getOrderId(), warehouseId, skus)
+                    .flatMap(result -> {
+                        if (result == ReserveResult.RESERVED || result == ReserveResult.ALREADY_RESERVED) {
+                            return Mono.just(warehouseId);
+                        }
+                        log.info("Reserve INSUFFICIENT_STOCK on warehouse={}, trying next", warehouseId);
+                        return Mono.<String>empty();
+                    })
+                    .onErrorResume(ex -> {
+                        log.warn("Reserve failed on warehouse={}: {}, trying next", warehouseId, ex.getMessage());
+                        return Mono.empty();
+                    })
+            )
+            .next();
+    }
+
+    private Mono<Void> persistValidated(Order order, String warehouseId) {
+        Order assigned = order.getWarehouseId() != null && order.getWarehouseId().equals(warehouseId)
+            ? order
+            : order.withWarehouse(warehouseId);
+        Order validated = assigned.withStatus(Status.VALIDATED);
+
+        return orderRepo.save(validated)
+            .then(historyRepo.append(
+                OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.VALIDATED)))
+            .doOnSuccess(v -> log.info("Order {} VALIDATED with warehouse {}", order.getOrderId(), warehouseId));
+    }
+
+    private Mono<Void> persistRejected(Order order) {
+        Order rejected = order.withStatus(Status.REJECTED);
+        return orderRepo.save(rejected)
+            .then(historyRepo.append(
+                OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED)))
+            .doOnSuccess(v -> log.warn("Order {} REJECTED — no warehouse could reserve stock", order.getOrderId()))
+            .then();
+    }
+
+    private Mono<List<String>> rankWarehouses(Order order, List<InventoryClient.SkuQuantity> skus) {
+        return warehouseClient.listWarehouses()
+            .flatMap(warehouses -> {
+                if (warehouses.isEmpty()) {
+                    return Mono.error(new IllegalStateException("No warehouses available"));
+                }
+
+                double maxDist = warehouses.stream()
+                    .mapToDouble(w -> haversine(order.getLat(), order.getLng(), w.lat(), w.lng()))
+                    .max().orElse(1.0);
+
+                return Flux.fromIterable(warehouses)
+                    .flatMap(w -> scoreWarehouse(w, order, skus, maxDist), MAX_CONCURRENT_CHECKS)
+                    .collectSortedList(Comparator
+                        .comparing(ScoredWarehouse::isReserved)
+                        .thenComparing(Comparator.comparingDouble(ScoredWarehouse::score).reversed()))
+                    .map(scored -> scored.stream().map(ScoredWarehouse::id).toList());
+            });
+    }
+
+    private Mono<ScoredWarehouse> scoreWarehouse(WarehouseSummary w,
+                                                  Order order,
+                                                  List<InventoryClient.SkuQuantity> skus,
+                                                  double maxDist) {
+        double dist = haversine(order.getLat(), order.getLng(), w.lat(), w.lng());
+        double distScore = (maxDist == 0) ? 1.0 : 1.0 - (dist / maxDist);
+
+        return inventoryClient.checkAvailability(w.warehouseId(), skus)
+            .filter(AvailabilityResult::canFulfillAll)
+            .map(avail -> {
+                double minStockRatio = avail.items().stream()
+                    .mapToDouble(i -> (double) i.available() / (i.required() * STOCK_BUFFER_FACTOR))
+                    .min().orElse(0.0);
+                double stockScore = Math.min(minStockRatio, 1.0);
+
+                double score = DISTANCE_WEIGHT * distScore + (1 - DISTANCE_WEIGHT) * stockScore;
+                boolean nearReservation = stockScore < RESERVATION_THRESHOLD;
+                return new ScoredWarehouse(w.warehouseId(), score, nearReservation);
+            })
+            .defaultIfEmpty(new ScoredWarehouse(w.warehouseId(), DISTANCE_WEIGHT * distScore, true))
+            .onErrorReturn(new ScoredWarehouse(w.warehouseId(), DISTANCE_WEIGHT * distScore, true));
+    }
+
+    private record ScoredWarehouse(String id, double score, boolean isReserved) {}
+
+    private List<InventoryClient.SkuQuantity> toSkuQuantities(Order order) {
+        return order.getItems().stream()
             .map(i -> new InventoryClient.SkuQuantity(i.getSku(), i.getQuantity()))
             .toList();
-
-        double maxDist = warehouses.stream()
-            .mapToDouble(w -> haversine(order.getLat(), order.getLng(), w.lat(), w.lng()))
-            .max().orElse(1.0);
-
-        record ScoredWarehouse(String id, double score, boolean isReserved) {}
-
-        List<ScoredWarehouse> candidates = new ArrayList<>();
-
-        for (WarehouseClient.WarehouseSummary w : warehouses) {
-            InventoryClient.AvailabilityResult availability =
-                inventoryClient.checkAvailability(w.warehouseId(), skus);
-
-            if (!availability.canFulfillAll()) continue;
-
-            double minStockRatio = availability.items().stream()
-                .mapToDouble(i -> (double) i.available() / (i.required() * STOCK_BUFFER_FACTOR))
-                .min().orElse(0.0);
-            double stockScore = Math.min(minStockRatio, 1.0);
-
-            double dist = haversine(order.getLat(), order.getLng(), w.lat(), w.lng());
-            double distScore = (maxDist == 0) ? 1.0 : 1.0 - (dist / maxDist);
-
-            double score = DISTANCE_WEIGHT * distScore + (1 - DISTANCE_WEIGHT) * stockScore;
-            boolean isReserved = stockScore < RESERVATION_THRESHOLD;
-
-            candidates.add(new ScoredWarehouse(w.warehouseId(), score, isReserved));
-        }
-
-        if (candidates.isEmpty()) throw new IllegalStateException("No warehouse can fulfill this order");
-
-        return candidates.stream()
-            .filter(c -> !c.isReserved())
-            .max(Comparator.comparingDouble(ScoredWarehouse::score))
-            .orElseGet(() -> candidates.stream()
-                .max(Comparator.comparingDouble(ScoredWarehouse::score))
-                .orElseThrow())
-            .id();
     }
 
     private double haversine(double lat1, double lng1, double lat2, double lng2) {

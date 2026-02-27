@@ -12,6 +12,11 @@ public class WarehouseRestMapper {
     }
     
     public static WarehouseResponse toResponse(Warehouse warehouse) {
-        return new WarehouseResponse(warehouse.getWarehouseId(), warehouse.getCity());
+        return new WarehouseResponse(
+            warehouse.getWarehouseId(),
+            warehouse.getCity(),
+            warehouse.getLat(),
+            warehouse.getLng()
+        );
     }
 }

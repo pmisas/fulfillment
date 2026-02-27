@@ -7,26 +7,27 @@ import org.springframework.stereotype.Repository;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
 
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Repository
 @Profile("cloud")
 public class DynamoDbOrderStateHistoryRepositoryAdapter implements OrderStateHistoryRepository {
 
-    private final DynamoDbTable<OrderStateHistoryEntity> table;
+    private final DynamoDbAsyncTable<OrderStateHistoryEntity> table;
 
     public DynamoDbOrderStateHistoryRepositoryAdapter(
-        DynamoDbEnhancedClient enhancedClient,
+        DynamoDbEnhancedAsyncClient enhancedAsyncClient,
         @Value("${aws.dynamodb.historyTable}") String tableName
     ) {
-        this.table = enhancedClient.table(tableName, TableSchema.fromBean(OrderStateHistoryEntity.class));
+        this.table = enhancedAsyncClient.table(tableName, TableSchema.fromBean(OrderStateHistoryEntity.class));
     }
 
     @Override
-    public void append(OrderStateHistory history) {
-        table.putItem(toEntity(history));
+    public Mono<Void> append(OrderStateHistory history) {
+        return Mono.fromFuture(() -> table.putItem(toEntity(history))).then();
     }
 
     private OrderStateHistoryEntity toEntity(OrderStateHistory h) {

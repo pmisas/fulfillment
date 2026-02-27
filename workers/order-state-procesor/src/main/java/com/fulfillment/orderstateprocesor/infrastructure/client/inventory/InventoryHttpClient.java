@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityRequest;
@@ -12,60 +12,61 @@ import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.Av
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.AvailabilityResponse;
 import com.fulfillment.orderstateprocesor.infrastructure.client.inventory.dto.ReserveRequest;
 
+import reactor.core.publisher.Mono;
+
 @Component
 public class InventoryHttpClient implements InventoryClient {
 
-    private final RestClient client;
+    private final WebClient webClient;
 
     public InventoryHttpClient(@Value("${services.inventory.baseUrl}") String baseUrl) {
-        this.client = RestClient.builder().baseUrl(baseUrl).build();
+        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 
     @Override
-    public ReserveResult reserveAll(String reservationId, String orderId, String warehouseId, List<SkuQuantity> items) {
+    public Mono<ReserveResult> reserveAll(String reservationId, String orderId, String warehouseId, List<SkuQuantity> items) {
         List<ReserveRequest.SkuQuantityDto> dtoItems = items.stream()
             .map(i -> new ReserveRequest.SkuQuantityDto(i.sku(), i.quantity()))
             .toList();
 
-        return client.post()
+        return webClient.post()
             .uri("/api/v1/warehouses/{warehouseId}/reservations", warehouseId)
-            .body(new ReserveRequest(reservationId, orderId, dtoItems))
-            .exchange((request, response) -> switch (response.getStatusCode().value()) {
-                case 201 -> ReserveResult.RESERVED;
-                case 200 -> ReserveResult.ALREADY_RESERVED;
-                case 422 -> ReserveResult.INSUFFICIENT_STOCK;
-                default  -> throw new IllegalStateException(
-                    "Unexpected status from inventory-service: " + response.getStatusCode()
-                );
+            .bodyValue(new ReserveRequest(reservationId, orderId, dtoItems))
+            .exchangeToMono(response -> switch (response.statusCode().value()) {
+                case 201 -> Mono.just(ReserveResult.RESERVED);
+                case 200 -> Mono.just(ReserveResult.ALREADY_RESERVED);
+                case 422 -> Mono.just(ReserveResult.INSUFFICIENT_STOCK);
+                default  -> Mono.error(new IllegalStateException(
+                    "Unexpected status from inventory-service: " + response.statusCode()));
             });
     }
 
     @Override
-    public void releaseReservation(String reservationId) {
-        client.delete()
+    public Mono<Void> releaseReservation(String reservationId) {
+        return webClient.delete()
             .uri("/api/v1/reservations/{reservationId}", reservationId)
             .retrieve()
-            .toBodilessEntity();
+            .toBodilessEntity()
+            .then();
     }
 
     @Override
-    public AvailabilityResult checkAvailability(String warehouseId, List<SkuQuantity> items) {
+    public Mono<AvailabilityResult> checkAvailability(String warehouseId, List<SkuQuantity> items) {
         List<SkuQuantityDto> dtoItems = items.stream()
             .map(i -> new SkuQuantityDto(i.sku(), i.quantity()))
             .toList();
 
-        AvailabilityResponse response = client.post()
+        return webClient.post()
             .uri("/api/v1/warehouses/{warehouseId}/inventory/availability", warehouseId)
-            .body(new AvailabilityRequest(dtoItems))
+            .bodyValue(new AvailabilityRequest(dtoItems))
             .retrieve()
-            .body(AvailabilityResponse.class);
-
-        if (response == null) return new AvailabilityResult(false, List.of());
-
-        List<ItemAvailability> mapped = response.items().stream()
-            .map(i -> new ItemAvailability(i.sku(), i.required(), i.available(), i.canFulfill()))
-            .toList();
-
-        return new AvailabilityResult(response.canFulfillAll(), mapped);
+            .bodyToMono(AvailabilityResponse.class)
+            .map(resp -> {
+                List<ItemAvailability> mapped = resp.items().stream()
+                    .map(i -> new ItemAvailability(i.sku(), i.required(), i.available(), i.canFulfill()))
+                    .toList();
+                return new AvailabilityResult(resp.canFulfillAll(), mapped);
+            })
+            .defaultIfEmpty(new AvailabilityResult(false, List.of()));
     }
 }
