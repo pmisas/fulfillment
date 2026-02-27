@@ -165,8 +165,11 @@ public class OrderReceivedHandler implements OrderEventHandler {
                 boolean nearReservation = stockScore < RESERVATION_THRESHOLD;
                 return new ScoredWarehouse(w.warehouseId(), score, nearReservation);
             })
-            .defaultIfEmpty(new ScoredWarehouse(w.warehouseId(), DISTANCE_WEIGHT * distScore, true))
-            .onErrorReturn(new ScoredWarehouse(w.warehouseId(), DISTANCE_WEIGHT * distScore, true));
+            .onErrorResume(ex -> {
+                log.warn("Availability check failed for warehouse={}: {}, excluding from candidates",
+                    w.warehouseId(), ex.getMessage());
+                return Mono.empty();
+            });
     }
 
     private record ScoredWarehouse(String id, double score, boolean isReserved) {}
