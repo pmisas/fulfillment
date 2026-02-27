@@ -3,6 +3,7 @@ package com.fulfillment.warehouseservice.application;
 import java.util.List;
 
 import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
+import com.fulfillment.warehouseservice.application.dto.WarehouseStartFlowCommand;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 
 public interface WarehouseService {
@@ -12,4 +13,7 @@ public interface WarehouseService {
     List<Warehouse> getAll();
     boolean existsAny();
     boolean existsById(String warehouseId);
+
+    void startPicking(WarehouseStartFlowCommand command);
+    void startPacking(WarehouseStartFlowCommand command);
 }

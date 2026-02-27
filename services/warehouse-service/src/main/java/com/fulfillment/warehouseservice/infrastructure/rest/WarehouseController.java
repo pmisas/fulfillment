@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.warehouseservice.application.WarehouseService;
 import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
+import com.fulfillment.warehouseservice.application.dto.WarehouseStartFlowCommand;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.CreateWarehouseRequest;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseResponse;
@@ -74,5 +75,17 @@ public class WarehouseController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("{warehouseId}/orders/{orderId}/picking/start")
+    public ResponseEntity<Void> startPicking(
+                @PathVariable String warehouseId, 
+                @PathVariable String orderId) { 
+
+        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(
+                warehouseId, 
+                orderId
+        );
+        warehouseService.startPicking(command);
+        return ResponseEntity.accepted().build();
+    }
 
 }
