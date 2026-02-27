@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb;
+package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.warehouse;
 
 import java.time.Instant;
 

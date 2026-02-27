@@ -21,6 +21,7 @@ import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseRespons
 
 import jakarta.validation.Valid;
 
+
 @RestController
 @RequestMapping("/api/v1/warehouses")
 public class WarehouseController {
@@ -72,5 +73,6 @@ public class WarehouseController {
         }
         return ResponseEntity.noContent().build();
     }
+
 
 }
