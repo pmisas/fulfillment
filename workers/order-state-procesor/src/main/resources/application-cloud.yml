@@ -1,0 +1,22 @@
+server:
+  port: 8090
+
+worker:
+  maxConcurrentProcessing: ${WORKER_MAX_CONCURRENT:5}
+
+aws:
+  region: ${AWS_REGION}
+  sqs:
+    queueUrl: ${SQS_QUEUE_URL}
+    waitTimeSeconds: ${SQS_WAIT_TIME_SECONDS:10}
+    maxMessages: ${SQS_MAX_MESSAGES:10}
+    visibilityTimeoutSeconds: ${SQS_VISIBILITY_TIMEOUT_SECONDS:30}
+  dynamodb:
+    ordersTable: ${ORDER_TABLE_NAME}
+    historyTable: ${ORDER_HISTORY_TABLE_NAME}
+
+services:
+  warehouse:
+    baseUrl: ${WAREHOUSE_BASE_URL}
+  inventory:
+    baseUrl: ${INVENTORY_BASE_URL}

@@ -1,0 +1,23 @@
+server:
+  port: 8090
+
+worker:
+  maxConcurrentProcessing: 5
+
+aws:
+  region: us-east-1
+  sqs:
+    queueUrl: "http://localhost:4566/098765/OrderEventsQueue"
+    waitTimeSeconds: 10
+    maxMessages: 10
+    visibilityTimeoutSeconds: 30
+  dynamodb:
+    endpoint: "http://localhost:8000"
+    ordersTable: Orders
+    historyTable: OrdersStateHistory
+
+services:
+  warehouse:
+    baseUrl: "http://localhost:8081"
+  inventory:
+    baseUrl: "http://localhost:8082"

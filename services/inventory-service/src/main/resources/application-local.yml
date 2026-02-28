@@ -1,0 +1,13 @@
+server:
+  port: 8082
+
+warehouse:
+  service:
+    base-url: "http://localhost:8081"
+
+aws:
+  region: us-east-1
+  dynamodb:
+    endpoint: "http://localhost:8000"
+    inventory-table: InventoryItems
+    

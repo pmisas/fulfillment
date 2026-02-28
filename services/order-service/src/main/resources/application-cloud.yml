@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+aws:
+  region: ${AWS_REGION}
+  dynamodb:
+    orders-table: ${ORDER_TABLE_NAME}
+    history-table: ${ORDER_HISTORY_TABLE_NAME}
+    outbox-table: ${OUTBOX_TABLE_NAME}
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}

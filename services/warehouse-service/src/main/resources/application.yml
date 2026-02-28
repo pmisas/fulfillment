@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: warehouse-service
+  profiles:
+    active: cloud
+
+server:
+  port: 8081

@@ -1,0 +1,12 @@
+server:
+  port: 8082
+
+warehouse:
+  service:
+    base-url: ${WAREHOUSE_BASE_URL}
+
+aws:
+  region: ${AWS_REGION}
+  dynamodb:
+    inventory-table: ${INVENTORY_TABLE_NAME}
+    
