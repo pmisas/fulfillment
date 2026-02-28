@@ -1,0 +1,8 @@
+server:
+  port: 8081
+
+aws:
+  region: ${AWS_REGION}
+  dynamodb:
+    warehouses-table: ${WAREHOUSE_TABLE_NAME}
+    outbox-table: ${OUTBOX_TABLE_NAME}

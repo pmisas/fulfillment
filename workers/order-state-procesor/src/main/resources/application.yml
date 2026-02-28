@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: order-state-processor
+  profiles:
+    active: cloud
+
+server:
+  port: 8090
+
+logging:
+  level:
+    org.springframework.web: INFO
+    com.fulfillment: INFO

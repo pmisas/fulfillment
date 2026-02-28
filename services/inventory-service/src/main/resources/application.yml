@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: inventory-service
+  profiles:
+    active: cloud
+
+server:
+  port: 8082
+  

@@ -75,7 +75,7 @@ public class WarehouseController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("{warehouseId}/orders/{orderId}/picking/start")
+    @PostMapping("/{warehouseId}/orders/{orderId}/picking/start")
     public ResponseEntity<Void> startPicking(
                 @PathVariable String warehouseId, 
                 @PathVariable String orderId) { 
