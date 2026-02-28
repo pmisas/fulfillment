@@ -1,46 +1,78 @@
 package com.fulfillment.inventoryservice.infraestrcture.rest;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.fulfillment.inventoryservice.domain.exception.InsufficientAvailableStockException;
 import com.fulfillment.inventoryservice.domain.exception.InsufficientReservedStockException;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse.FieldViolation;
 
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
-  @ExceptionHandler(InsufficientAvailableStockException.class)
-  @ResponseStatus(HttpStatus.CONFLICT) // devuelve 409
-  public String handleInsufficientAvailableStock(InsufficientAvailableStockException ex) {
-      return ex.getMessage();
-  }
 
-  @ExceptionHandler(InsufficientReservedStockException.class)
-  @ResponseStatus(HttpStatus.CONFLICT) // devuelve 409
-  public String handleInsufficientReservedStock(InsufficientReservedStockException ex) {
-      return ex.getMessage();
-  }
+    @ExceptionHandler(InsufficientAvailableStockException.class)
+    public ResponseEntity<ApiErrorResponse> handleInsufficientAvailableStock(
+            InsufficientAvailableStockException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "INSUFFICIENT_AVAILABLE_STOCK", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
 
-  @ExceptionHandler(WarehouseNotFoundException.class)
-  @ResponseStatus(HttpStatus.NOT_FOUND) // devuelve 404
-  public String handleWarehouseNotFound(WarehouseNotFoundException ex) {
-      return ex.getMessage();
-  }
+    @ExceptionHandler(InsufficientReservedStockException.class)
+    public ResponseEntity<ApiErrorResponse> handleInsufficientReservedStock(
+            InsufficientReservedStockException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "INSUFFICIENT_RESERVED_STOCK", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
 
-  @ExceptionHandler(IllegalArgumentException.class)
-  @ResponseStatus(HttpStatus.BAD_REQUEST) //400
-  public String handleIllegalArg(IllegalArgumentException ex) {
-    return ex.getMessage();
-  }
+    @ExceptionHandler(WarehouseNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleWarehouseNotFound(
+            WarehouseNotFoundException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "WAREHOUSE_NOT_FOUND", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
 
-  @ExceptionHandler(Exception.class)
-  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) //500
-  public String handleGeneric(Exception ex) {
-    return "Unexpected error"+ ex;
-  }
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiErrorResponse> handleDtoValidation(
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        List<FieldViolation> fields = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> new FieldViolation(fe.getField(), fe.getDefaultMessage()))
+                .toList();
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "VALIDATION_ERROR", "El request tiene campos inválidos.", fields);
+        return ResponseEntity.status(status).body(body);
+    }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArg(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "BAD_REQUEST", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleGeneric(
+            Exception ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "INTERNAL_ERROR", "Ha ocurrido un error inesperado.", null);
+        return ResponseEntity.status(status).body(body);
+    }
 }
