@@ -16,7 +16,7 @@ public class InventoryReservationEntity {
     private String reservationId;
     private String orderId;
     private String warehouseId;
-    private Long createdAtMs;
+    private Long createdAt;
     private Long ttl;
 
     private List<Item> items;

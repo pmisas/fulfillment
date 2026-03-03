@@ -77,7 +77,7 @@ public class DynamoInventoryTransactions
                                     "sku", AttributeValue.fromS(item.sku())
                             ))
                             .updateExpression("SET reserved = if_not_exists(reserved, :zero) + :qty")
-                            .conditionExpression("attribute_exists(warehouseId) AND (quantity - if_not_exists(reserved, :zero)) >= :qty")
+                            .conditionExpression("attribute_exists(warehouseId)")
                             .expressionAttributeValues(Map.of(
                                     ":qty", AttributeValue.fromN(String.valueOf(item.quantity())),
                                     ":zero", AttributeValue.fromN("0")
@@ -192,7 +192,7 @@ public class DynamoInventoryTransactions
             throw new IllegalArgumentException("Max 100 items per Dynamo transaction");
         }
 
-        long nowMs = Instant.now().toEpochMilli();
+        String now = Instant.now().toString();
 
         List<TransactWriteItem> txItems = new ArrayList<>();
 
@@ -215,7 +215,7 @@ public class DynamoInventoryTransactions
                             .expressionAttributeValues(Map.of(
                                     ":qty", AttributeValue.fromN(String.valueOf(item.quantity())),
                                     ":zero", AttributeValue.fromN("0"),
-                                    ":now", AttributeValue.fromN(String.valueOf(nowMs))
+                                    ":now", AttributeValue.fromS(now)
                             ))
                             .build())
                     .build());

@@ -68,19 +68,33 @@ public class OrderReceivedHandler implements OrderEventHandler {
 
         return orderRepo.findById(orderId)
             .switchIfEmpty(Mono.error(new OrderNotFoundException(orderId)))
-            .filter(order -> order.getStatus() == Status.RECEIVED)
-            .flatMap(this::rankAndReserveWithFallback)
-            .then();
+            .flatMap(order -> {
+                if (order.getStatus() != Status.RECEIVED) {
+                    log.info("Order {} already in status {}, skipping processing (idempotency)", 
+                            orderId, order.getStatus());
+                    return Mono.<Void>empty();
+                }
+                return rankAndReserveWithFallback(order).then();
+            })
+            .switchIfEmpty(Mono.empty());
     }
 
     private Mono<Void> rankAndReserveWithFallback(Order order) {
         List<InventoryClient.SkuQuantity> skus = toSkuQuantities(order);
         String reservationId = "resv:" + order.getOrderId();
 
+        log.info("Processing order={}, items={}", order.getOrderId(), skus);
+
         return rankWarehouses(order, skus)
+            .doOnNext(rankedIds -> log.info("Ranked warehouses for order={}: {}", order.getOrderId(), rankedIds))
             .flatMap(rankedIds -> tryReserveInOrder(rankedIds, reservationId, order, skus))
+            .doOnNext(warehouseId -> log.info("tryReserveInOrder succeeded with warehouse={} for order={}", 
+                                              warehouseId, order.getOrderId()))
             .flatMap(warehouseId -> persistValidated(order, warehouseId))
-            .switchIfEmpty(persistRejected(order));
+            .switchIfEmpty(Mono.defer(() -> {
+                log.info("No warehouse found for order={}, executing persistRejected", order.getOrderId());
+                return persistRejected(order);
+            }));
     }
 
     private Mono<String> tryReserveInOrder(List<String> rankedWarehouseIds,
@@ -88,9 +102,11 @@ public class OrderReceivedHandler implements OrderEventHandler {
                                             Order order,
                                             List<InventoryClient.SkuQuantity> skus) {
         return Flux.fromIterable(rankedWarehouseIds)
-            .concatMap(warehouseId ->
-                inventoryClient.reserveAll(reservationId, order.getOrderId(), warehouseId, skus)
+            .concatMap(warehouseId -> {
+                log.info("Attempting reserve on warehouse={} for order={}", warehouseId, order.getOrderId());
+                return inventoryClient.reserveAll(reservationId, order.getOrderId(), warehouseId, skus)
                     .flatMap(result -> {
+                        log.info("Reserve result={} on warehouse={} for order={}", result, warehouseId, order.getOrderId());
                         if (result == ReserveResult.RESERVED || result == ReserveResult.ALREADY_RESERVED) {
                             return Mono.just(warehouseId);
                         }
@@ -100,8 +116,8 @@ public class OrderReceivedHandler implements OrderEventHandler {
                     .onErrorResume(ex -> {
                         log.warn("Reserve failed on warehouse={}: {}, trying next", warehouseId, ex.getMessage());
                         return Mono.empty();
-                    })
-            )
+                    });
+            })
             .next();
     }
 
@@ -111,24 +127,41 @@ public class OrderReceivedHandler implements OrderEventHandler {
             : order.withWarehouse(warehouseId);
         Order validated = assigned.withStatus(Status.VALIDATED);
 
-        return orderRepo.save(validated)
-            .then(historyRepo.append(
-                OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.VALIDATED)))
-            .doOnSuccess(v -> log.info("Order {} VALIDATED with warehouse {}", order.getOrderId(), warehouseId));
+        return orderRepo.saveIfStatusIs(validated, Status.RECEIVED)
+            .flatMap(saved -> {
+                if (!saved) {
+                    log.info("Order {} already processed by another handler, skipping VALIDATED transition",
+                             order.getOrderId());
+                    return Mono.just("idempotent").then();
+                }
+                return historyRepo.append(
+                    OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.VALIDATED))
+                    .doOnSuccess(v -> log.info("Order {} VALIDATED with warehouse {}", 
+                                               order.getOrderId(), warehouseId));
+            });
     }
 
     private Mono<Void> persistRejected(Order order) {
         Order rejected = order.withStatus(Status.REJECTED);
-        return orderRepo.save(rejected)
-            .then(historyRepo.append(
-                OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED)))
-            .doOnSuccess(v -> log.warn("Order {} REJECTED — no warehouse could reserve stock", order.getOrderId()))
-            .then();
+        return orderRepo.saveIfStatusIs(rejected, Status.RECEIVED)
+            .flatMap(saved -> {
+                if (!saved) {
+                    log.info("Order {} already processed by another handler, skipping REJECTED transition",
+                             order.getOrderId());
+                    return Mono.just("idempotent").then();
+                }
+                return historyRepo.append(
+                    OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED))
+                    .doOnSuccess(v -> log.warn("Order {} REJECTED — no warehouse could reserve stock", 
+                                               order.getOrderId()))
+                    .then();
+            });
     }
 
     private Mono<List<String>> rankWarehouses(Order order, List<InventoryClient.SkuQuantity> skus) {
         return warehouseClient.listWarehouses()
             .flatMap(warehouses -> {
+                log.info("Found {} warehouses for order={}", warehouses.size(), order.getOrderId());
                 if (warehouses.isEmpty()) {
                     return Mono.error(new IllegalStateException("No warehouses available"));
                 }
@@ -154,7 +187,11 @@ public class OrderReceivedHandler implements OrderEventHandler {
         double distScore = (maxDist == 0) ? 1.0 : 1.0 - (dist / maxDist);
 
         return inventoryClient.checkAvailability(w.warehouseId(), skus)
-            .filter(AvailabilityResult::canFulfillAll)
+            .filter(avail -> {
+                boolean canFulfill = avail.canFulfillAll();
+                log.info("Warehouse={} canFulfillAll={}", w.warehouseId(), canFulfill);
+                return canFulfill;
+            })
             .map(avail -> {
                 double minStockRatio = avail.items().stream()
                     .mapToDouble(i -> (double) i.available() / (i.required() * STOCK_BUFFER_FACTOR))
@@ -163,6 +200,7 @@ public class OrderReceivedHandler implements OrderEventHandler {
 
                 double score = DISTANCE_WEIGHT * distScore + (1 - DISTANCE_WEIGHT) * stockScore;
                 boolean nearReservation = stockScore < RESERVATION_THRESHOLD;
+                log.info("Warehouse={} score={}, dist={}, stock={}", w.warehouseId(), score, distScore, stockScore);
                 return new ScoredWarehouse(w.warehouseId(), score, nearReservation);
             })
             .onErrorResume(ex -> {

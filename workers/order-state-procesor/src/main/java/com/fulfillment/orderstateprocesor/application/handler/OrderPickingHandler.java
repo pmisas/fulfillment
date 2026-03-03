@@ -38,7 +38,7 @@ public class OrderPickingHandler implements OrderEventHandler {
 
     @Override
     public String eventType() {
-        return "Picked";
+        return "PickingStarted";
     }
 
     @Override

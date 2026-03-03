@@ -38,7 +38,7 @@ public class OrderPackedHandler implements OrderEventHandler {
 
     @Override
     public String eventType() {
-        return "OrderPacked";
+        return "PackingStarted";
     }
 
     @Override

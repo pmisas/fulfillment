@@ -1,4 +1,4 @@
-﻿package com.fulfillment.inventoryservice.application;
+package com.fulfillment.inventoryservice.application;
 
 import java.util.ArrayList;
 import java.util.HashMap;

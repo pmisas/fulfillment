@@ -10,4 +10,3 @@ aws:
   dynamodb:
     inventory-table: ${INVENTORY_TABLE_NAME}
     reservation-table: ${RESERVATION_TABLE_NAME}
-    

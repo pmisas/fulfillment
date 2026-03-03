@@ -1,5 +1,9 @@
 package com.fulfillment.orderstateprocesor.infrastructure.repository.dynamodb.order;
 
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
@@ -10,6 +14,11 @@ import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -19,13 +28,20 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 @Profile("cloud")
 public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
 
+    private static final Logger log = LoggerFactory.getLogger(DynamoDbOrderRepositoryAdapter.class);
+
     private final DynamoDbAsyncTable<OrderEntity> table;
+    private final DynamoDbAsyncClient lowLevelClient;
+    private final String tableName;
 
     public DynamoDbOrderRepositoryAdapter(
         DynamoDbEnhancedAsyncClient enhancedAsyncClient,
+        DynamoDbAsyncClient lowLevelClient,
         @Value("${aws.dynamodb.ordersTable}") String tableName
     ) {
         this.table = enhancedAsyncClient.table(tableName, TableSchema.fromBean(OrderEntity.class));
+        this.lowLevelClient = lowLevelClient;
+        this.tableName = tableName;
     }
 
     @Override
@@ -90,5 +106,29 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
             e.getUpdatedAt(),
             items
         );
+    }
+
+    @Override
+    public Mono<Boolean> saveIfStatusIs(Order order, Status expectedStatus) {
+        OrderEntity entity = toEntity(order);
+        Map<String, AttributeValue> item = table.tableSchema().itemToMap(entity, false);
+
+        PutItemRequest request = PutItemRequest.builder()
+            .tableName(tableName)
+            .item(item)
+            .conditionExpression("#status = :expectedStatus")
+            .expressionAttributeNames(Map.of("#status", "status"))
+            .expressionAttributeValues(Map.of(
+                ":expectedStatus", AttributeValue.builder().s(expectedStatus.name()).build()
+            ))
+            .build();
+
+        return Mono.fromFuture(lowLevelClient.putItem(request))
+            .thenReturn(true)
+            .onErrorResume(ConditionalCheckFailedException.class, ex -> {
+                log.info("Conditional update failed for order={}: status is no longer {}", 
+                         order.getOrderId(), expectedStatus);
+                return Mono.just(false);
+            });
     }
 }

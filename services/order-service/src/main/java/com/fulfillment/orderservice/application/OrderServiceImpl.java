@@ -76,7 +76,7 @@ public class OrderServiceImpl implements OrderService {
                         order.getOrderId());
 
             String eventType = "OrderReceived";
-            String eventId = "ORDER:" + order.getOrderId() + ":" + eventType;
+            String eventId = "OrderReceived:" + order.getOrderId() + ":" + eventType;
 
             OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
                     eventId,

@@ -72,7 +72,7 @@ public class GlobalExceptionHandler {
             Exception ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ApiErrorResponse body = new ApiErrorResponse(
-                status.value(), "INTERNAL_ERROR", "Ha ocurrido un error inesperado.", null);
+                status.value(), "INTERNAL_ERROR", ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 }

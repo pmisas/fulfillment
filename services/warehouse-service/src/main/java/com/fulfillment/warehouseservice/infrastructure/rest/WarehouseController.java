@@ -88,4 +88,17 @@ public class WarehouseController {
         return ResponseEntity.accepted().build();
     }
 
+    @PostMapping("/{warehouseId}/orders/{orderId}/packing/start")
+    public ResponseEntity<Void> startPacking(
+                @PathVariable String warehouseId, 
+                @PathVariable String orderId) { 
+
+        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(
+                warehouseId, 
+                orderId
+        );
+        warehouseService.startPacking(command);
+        return ResponseEntity.accepted().build();
+    }
+
 }
