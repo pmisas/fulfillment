@@ -2,6 +2,8 @@ package com.fulfillment.warehouseservice.application;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +20,8 @@ import static com.fulfillment.warehouseservice.domain.shared.DomainValidations.r
 
 @Service
 public class WarehouseServiceImpl implements WarehouseService{
+
+    private static final Logger log = LoggerFactory.getLogger(WarehouseServiceImpl.class);
 
     private final WarehouseRepository warehouseRepo;
     private final OutboxEventsRepository outboxRepo;
@@ -73,7 +77,11 @@ public class WarehouseServiceImpl implements WarehouseService{
         String warehouseId = requireNonBlank(command.warehouseId(), "warehouseId").trim();
         String orderId = requireNonBlank(command.orderId(), "orderId").trim();
 
+        log.info("Publishing warehouse flow event: eventType={}, orderId={}, warehouseId={}", 
+                 eventType, orderId, warehouseId);
+
         if (!warehouseRepo.existsById(warehouseId)) {
+            log.warn("Warehouse not found: warehouseId={}", warehouseId);
             throw new WarehouseNotFoundException(warehouseId);
         }
     
@@ -87,7 +95,13 @@ public class WarehouseServiceImpl implements WarehouseService{
             buildWarehouseOrderActionPayload(orderId, warehouseId)
         );
 
-        outboxRepo.savePendingIfAbsent(pendingEvent);
+        boolean saved = outboxRepo.savePendingIfAbsent(pendingEvent);
+        
+        if (saved) {
+            log.info("Outbox event created successfully: eventId={}", eventId);
+        } else {
+            log.warn("Outbox event already exists (idempotent): eventId={}", eventId);
+        }
     }
 
     private String buildWarehouseOrderActionPayload(String orderId, String warehouseId) {
