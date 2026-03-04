@@ -50,5 +50,12 @@ public class OrderController {
         return OrderRestMapper.toResponse(order);
     }
     
+    @PostMapping("/{id}/cancel")
+    @ResponseStatus(HttpStatus.OK)
+    public OrderResponse cancelOrder(@PathVariable("id") String id) {
     
+        Order order = orderService.cancel(id);
+        return OrderRestMapper.toResponse(order);
+    }
+
 }
