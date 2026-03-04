@@ -100,7 +100,13 @@ public class WarehouseServiceImpl implements WarehouseService{
         if (saved) {
             log.info("Outbox event created successfully: eventId={}", eventId);
         } else {
-            log.warn("Outbox event already exists (idempotent): eventId={}", eventId);
+            log.warn("Outbox event already exists, attempting to reset to PENDING: eventId={}", eventId);
+            boolean reset = outboxRepo.resetToPendingIfProcessed(eventId);
+            if (reset) {
+                log.info("Outbox event reset to PENDING for re-processing: eventId={}", eventId);
+            } else {
+                log.info("Outbox event already PENDING or being processed: eventId={}", eventId);
+            }
         }
     }
 

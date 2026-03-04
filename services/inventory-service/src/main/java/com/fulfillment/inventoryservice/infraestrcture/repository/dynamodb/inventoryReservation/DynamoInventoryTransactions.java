@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -30,6 +32,7 @@ import software.amazon.awssdk.services.dynamodb.model.Update;
 public class DynamoInventoryTransactions
     implements InventoryReservationTransaction, InventoryRestockTransaction {
 
+    private static final Logger log = LoggerFactory.getLogger(DynamoInventoryTransactions.class);
     private static final int RESERVATION_CONDITION_INDEX = 0;
 
     private final DynamoDbClient ddbClient;
@@ -103,10 +106,18 @@ public class DynamoInventoryTransactions
 
     @Override
     public void releaseAtomically(String reservationId) {
+        log.info("Attempting to release reservation: reservationId={}", reservationId);
+        
         InventoryReservationEntity entity = reservationTable.getItem(
                 Key.builder().partitionValue(reservationId).build());
 
-        if (entity == null) return; 
+        if (entity == null) {
+            log.warn("Reservation not found (may have been already released): reservationId={}", reservationId);
+            return; 
+        }
+
+        log.info("Found reservation: reservationId={}, warehouseId={}, orderId={}, items={}", 
+                 reservationId, entity.getWarehouseId(), entity.getOrderId(), entity.getItems().size());
 
         List<TransactWriteItem> txItems = new ArrayList<>();
 
@@ -118,6 +129,9 @@ public class DynamoInventoryTransactions
                 .build());
 
         for (InventoryReservationEntity.Item item : entity.getItems()) {
+            log.info("Releasing inventory item: warehouseId={}, sku={}, quantity={}", 
+                     entity.getWarehouseId(), item.getSku(), item.getQuantity());
+            
             txItems.add(TransactWriteItem.builder()
                     .update(Update.builder()
                             .tableName(inventoryTableName)
@@ -126,7 +140,7 @@ public class DynamoInventoryTransactions
                                     "sku", AttributeValue.fromS(item.getSku())
                             ))
                             .updateExpression("SET reserved = if_not_exists(reserved, :zero) - :qty")
-                            .conditionExpression("if_not_exists(reserved, :zero) >= :qty")
+                            .conditionExpression("attribute_exists(reserved) AND reserved >= :qty")
                             .expressionAttributeValues(Map.of(
                                     ":qty", AttributeValue.fromN(String.valueOf(item.getQuantity())),
                                     ":zero", AttributeValue.fromN("0")
@@ -135,8 +149,23 @@ public class DynamoInventoryTransactions
                     .build());
         }
 
-        ddbClient.transactWriteItems(
-                TransactWriteItemsRequest.builder().transactItems(txItems).build());
+        log.info("Executing DynamoDB transaction with {} write items", txItems.size());
+        
+        try {
+            ddbClient.transactWriteItems(
+                    TransactWriteItemsRequest.builder().transactItems(txItems).build());
+            log.info("Successfully released reservation: reservationId={}", reservationId);
+        } catch (TransactionCanceledException e) {
+            log.error("DynamoDB Transaction CANCELED while releasing reservation: reservationId={}", reservationId);
+            log.error("Cancellation reasons: {}", e.cancellationReasons());
+            log.error("Full exception: ", e);
+            throw new IllegalStateException("Failed to release reservation due to transaction cancellation: " + reservationId, e);
+        } catch (Exception e) {
+            log.error("UNEXPECTED error while releasing reservation: reservationId={}, errorType={}, message={}", 
+                      reservationId, e.getClass().getSimpleName(), e.getMessage());
+            log.error("Full exception: ", e);
+            throw new IllegalStateException("Failed to release reservation: " + reservationId, e);
+        }
     }
 
 

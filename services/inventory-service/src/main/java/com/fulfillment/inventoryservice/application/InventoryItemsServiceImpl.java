@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fulfillment.inventoryservice.application.dto.*;
@@ -22,6 +24,8 @@ import com.fulfillment.inventoryservice.domain.ports.WarehouseClient;
 
 @Service
 public class InventoryItemsServiceImpl implements InventoryItemsService {
+
+    private static final Logger log = LoggerFactory.getLogger(InventoryItemsServiceImpl.class);
 
     private final InventoryItemsRepository repo;
     private final InventoryReservationTransaction reservationTx;
@@ -125,7 +129,9 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
 
     @Override
     public void releaseReservation(String reservationId) {
+        log.info("Releasing reservation: reservationId={}", reservationId);
         reservationTx.releaseAtomically(reservationId);
+        log.info("Reservation release completed: reservationId={}", reservationId);
     }
 
 }

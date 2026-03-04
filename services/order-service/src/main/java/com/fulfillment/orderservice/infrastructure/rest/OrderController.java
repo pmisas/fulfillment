@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.orderservice.application.OrderService;
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.model.Order;
+import com.fulfillment.orderservice.infrastructure.rest.dto.AsyncOperationResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.CreateOrderRequest;
 import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
 
@@ -51,11 +52,13 @@ public class OrderController {
     }
     
     @PostMapping("/{id}/cancel")
-    @ResponseStatus(HttpStatus.OK)
-    public OrderResponse cancelOrder(@PathVariable("id") String id) {
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public AsyncOperationResponse cancelOrder(@PathVariable("id") String id) {
     
-        Order order = orderService.cancel(id);
-        return OrderRestMapper.toResponse(order);
+        orderService.cancel(id);
+        
+        // Return 202 Accepted with clear message that operation is async
+        return AsyncOperationResponse.cancellationRequested(id);
     }
 
 }

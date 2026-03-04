@@ -2,6 +2,8 @@ package com.fulfillment.orderstateprocesor.infrastructure.client.inventory;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,6 +19,7 @@ import reactor.core.publisher.Mono;
 @Component
 public class InventoryHttpClient implements InventoryClient {
 
+    private static final Logger log = LoggerFactory.getLogger(InventoryHttpClient.class);
     private final WebClient webClient;
 
     public InventoryHttpClient(@Value("${services.inventory.baseUrl}") String baseUrl) {
@@ -43,10 +46,14 @@ public class InventoryHttpClient implements InventoryClient {
 
     @Override
     public Mono<Void> releaseReservation(String reservationId) {
+        log.info("HTTP DELETE /internal/v1/reservations/{}", reservationId);
+        
         return webClient.delete()
             .uri("/internal/v1/reservations/{reservationId}", reservationId)
             .retrieve()
             .toBodilessEntity()
+            .doOnSuccess(v -> log.info("HTTP DELETE successful for reservationId={}", reservationId))
+            .doOnError(ex -> log.error("HTTP DELETE failed for reservationId={}: {}", reservationId, ex.getMessage(), ex))
             .then();
     }
 

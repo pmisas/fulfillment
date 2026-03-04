@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,16 +20,20 @@ import com.fulfillment.orderservice.domain.model.OrderStateHistory;
 import com.fulfillment.orderservice.domain.model.Status;
 import com.fulfillment.orderservice.domain.ports.IdempotencyStore;
 import com.fulfillment.orderservice.domain.ports.OrderRepository;
+import com.fulfillment.orderservice.domain.ports.OutboxEventsRepository;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction.OutboxPendingEvent;
 
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
+
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
     private final IdempotencyStore idempotencyStore;
     private final OrderWriteTransaction orderWriteTransaction;
+    private final OutboxEventsRepository outboxRepo;
 
     private static final Duration PENDING_TTL = Duration.ofMinutes(2);
     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
@@ -36,11 +42,13 @@ public class OrderServiceImpl implements OrderService {
             ObjectMapper mapper,
             OrderRepository orderRepo,
             IdempotencyStore idempotencyStore,
-            OrderWriteTransaction orderWriteTransaction) {
+            OrderWriteTransaction orderWriteTransaction,
+            OutboxEventsRepository outboxRepo) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
         this.idempotencyStore = idempotencyStore;
         this.orderWriteTransaction = orderWriteTransaction;
+        this.outboxRepo = outboxRepo;
     }
 
     @Override
@@ -132,39 +140,50 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Order cancel(String orderId) {
+    public void cancel(String orderId) {
+    
+        log.info("Requesting order cancellation: orderId={}", orderId);
     
         Order current = getById(orderId);
     
+        log.info("Order {} current status={}", orderId, current.getStatus());
+    
         if (current.getStatus() == Status.SHIPPED) {
+            log.warn("Cannot cancel shipped order: orderId={}", orderId);
             throw new IllegalStateException("Cannot cancel a shipped order");
         }
     
         if (current.getStatus() == Status.CANCELED) {
-            return current;
+            log.info("Order already canceled (idempotent): orderId={}", orderId);
+            return;
+        }
+
+        if (current.getStatus() == Status.REJECTED) {
+            log.info("Order already rejected, treating as canceled: orderId={}", orderId);
+            return;
         }
     
-        Order cancelled = current.withStatus(Status.CANCELED);
-    
-        OrderStateHistory history = OrderStateHistory.createOrderStateHistory(
-            UUID.randomUUID().toString(),
-            cancelled.getOrderId()
-        );
-    
+        // DO NOT change status here - let the worker do it after releasing inventory
+        // This prevents race condition and ensures inventory is always released
+        
         String eventType = "OrderCancelled";
-        String eventId = "OrderCancelled:" + cancelled.getOrderId();
+        String eventId = "OrderCancelled:" + orderId + ":" + eventType;
     
         OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
             eventId,
             "ORDER",
-            cancelled.getOrderId(),
+            orderId,
             eventType,
-            buildOrderCancelledPayload(cancelled, "USER_REQUEST")
+            buildOrderCancelledPayload(current, "USER_REQUEST")
         );
     
-        orderWriteTransaction.updateOrderWithHistoryAndOutbox(cancelled, history, outboxEvent);
+        log.info("Publishing OrderCancelled event (worker will cancel and release inventory): orderId={}, eventId={}", 
+                 orderId, eventId);
     
-        return cancelled;
+        // Just save the event, don't modify the order
+        outboxRepo.savePending(outboxEvent);
+    
+        log.info("OrderCancelled event published successfully: orderId={}", orderId);
     }
     
     private String buildOrderReceivedPayload(Order order) {

@@ -61,34 +61,49 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
                 log.info("Order {} current status={}", orderId, order.getStatus());
 
+                // If already canceled, this is a duplicate message - just ensure inventory is released
                 if (order.getStatus() == Status.CANCELED) {
-                    log.info("Order {} already CANCELED, skipping (idempotency)", orderId);
-                    return Mono.just("idempotent").then();
+                    log.info("Order {} already CANCELED (duplicate message - idempotent)", orderId);
+                    // Try to release anyway - operation is idempotent
+                    return releaseInventoryIfNeeded(reservationId, orderId)
+                        .then(Mono.empty());
                 }
 
                 if (order.getStatus() == Status.SHIPPED) {
                     log.warn("Order {} is SHIPPED, cannot cancel. Skipping.", orderId);
-                    return Mono.just("not-cancellable").then();
+                    return Mono.empty();
                 }
 
                 if (order.getStatus() == Status.REJECTED) {
-                    log.warn("Order {} is REJECTED, no need to cancel. Skipping.", orderId);
-                    return Mono.just("already-rejected").then();
+                    log.warn("Order {} is REJECTED, no inventory to release. Skipping.", orderId);
+                    return Mono.empty();
                 }
 
                 if (!isCancellable(order.getStatus())) {
                     log.warn("Order {} status={} is not cancellable, skipping.", orderId, order.getStatus());
-                    return Mono.just("not-cancellable").then();
+                    return Mono.empty();
                 }
 
-                return inventoryClient.releaseReservation(reservationId)
-                    .doOnSuccess(v -> log.info("Released reservation {} for order={}", reservationId, orderId))
-                    .onErrorResume(ex -> {
-                        log.error("Failed to release reservation {} for order={}: {}", 
-                                  reservationId, orderId, ex.getMessage());
-                        return Mono.error(ex);
-                    })
+                // Release inventory first, then update order status
+                return releaseInventoryIfNeeded(reservationId, orderId)
                     .then(persistCancelled(order, reason));
+            });
+    }
+
+    /**
+     * Releases inventory reservation. Idempotent - safe to call multiple times.
+     * If reservation doesn't exist, operation completes successfully (already released).
+     */
+    private Mono<Void> releaseInventoryIfNeeded(String reservationId, String orderId) {
+        log.info("Attempting to release inventory: reservationId={}, orderId={}", reservationId, orderId);
+        
+        return inventoryClient.releaseReservation(reservationId)
+            .doOnSuccess(v -> log.info("Successfully released reservation {} for order={}", reservationId, orderId))
+            .onErrorResume(ex -> {
+                // Don't fail - reservation may not exist or already released
+                log.warn("Could not release reservation {} for order={}: {} (may not exist or already released)", 
+                          reservationId, orderId, ex.getMessage());
+                return Mono.empty();
             });
     }
 

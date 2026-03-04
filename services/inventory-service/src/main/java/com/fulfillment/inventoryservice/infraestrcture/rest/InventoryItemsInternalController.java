@@ -1,8 +1,11 @@
 package com.fulfillment.inventoryservice.infraestrcture.rest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +30,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/internal/v1")
 public class InventoryItemsInternalController {
     
+    private static final Logger log = LoggerFactory.getLogger(InventoryItemsInternalController.class);
     private final InventoryItemsService inventoryService;
 
     public InventoryItemsInternalController(InventoryItemsService inventoryService) {
@@ -64,7 +68,14 @@ public class InventoryItemsInternalController {
     @DeleteMapping("/reservations/{reservationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void releaseReservation(@PathVariable String reservationId) {
-        inventoryService.releaseReservation(reservationId);
+        log.info("DELETE /internal/v1/reservations/{} - Starting release", reservationId);
+        try {
+            inventoryService.releaseReservation(reservationId);
+            log.info("DELETE /internal/v1/reservations/{} - Completed successfully", reservationId);
+        } catch (Exception e) {
+            log.error("DELETE /internal/v1/reservations/{} - FAILED: {}", reservationId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @PostMapping("/reservations/{reservationId}/consume") 
@@ -78,5 +89,19 @@ public class InventoryItemsInternalController {
             case CONSUMED -> ResponseEntity.noContent().build();
             case RESERVATION_NOT_FOUND -> ResponseEntity.notFound().build();
         };
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<String> handleIllegalState(IllegalStateException e) {
+        log.error("IllegalStateException in internal controller: {}", e.getMessage(), e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error: " + e.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleGenericException(Exception e) {
+        log.error("Unexpected exception in internal controller: {}", e.getMessage(), e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Internal server error: " + e.getMessage());
     }
 }
