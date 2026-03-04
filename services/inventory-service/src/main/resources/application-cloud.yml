@@ -10,3 +10,10 @@ aws:
   dynamodb:
     inventory-table: ${INVENTORY_TABLE_NAME}
     reservation-table: ${RESERVATION_TABLE_NAME}
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${COGNITO_ISSUER_URI}

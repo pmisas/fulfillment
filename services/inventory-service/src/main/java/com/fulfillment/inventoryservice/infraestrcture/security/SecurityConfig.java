@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.infrastructure.security;
+package com.fulfillment.inventoryservice.infraestrcture.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        
+
         var converter = new CognitoGroupsConverter();
 
         http
@@ -23,15 +23,11 @@ public class SecurityConfig {
 
                 .requestMatchers("/internal/v1/**").permitAll()
 
-                .requestMatchers(HttpMethod.POST, "/api/v1/warehouses").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/warehouses/*/inventory/restock")
+                    .hasAnyRole("WAREHOUSE_MANAGER", "ADMIN")
 
-                .requestMatchers(HttpMethod.POST,
-                    "/api/v1/warehouses/*/orders/*/picking/start",
-                    "/api/v1/warehouses/*/orders/*/packing/start"
-                ).hasAnyRole("WAREHOUSE_MANAGER", "ADMIN")
-
-                .requestMatchers(HttpMethod.GET, "/api/v1/warehouses/**")
-                    .hasAnyRole("WAREHOUSE_MANAGER", "OPERATOR", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/warehouses/*/inventory")
+                    .hasAnyRole("WAREHOUSE_MANAGER", "ADMIN")
 
                 .requestMatchers("/api/**").authenticated()
 
