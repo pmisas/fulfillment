@@ -1,0 +1,33 @@
+package com.fulfillment.warehouseservice.infrastructure.rest;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.fulfillment.warehouseservice.application.WarehouseService;
+
+@RestController
+@RequestMapping("/internal/v1/warehouses")
+public class WarehouseInternalController {
+
+    private final WarehouseService warehouseService;
+    
+    public WarehouseInternalController(WarehouseService warehouseService) {
+      this.warehouseService = warehouseService;
+    }
+
+ 
+    @RequestMapping(path ="/{id}", method = RequestMethod.HEAD)
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<Void> existsById(@PathVariable String id) {
+        if (warehouseService.existsById(id)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+}

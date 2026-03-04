@@ -55,11 +55,6 @@ public class WarehouseServiceImpl implements WarehouseService{
     }
 
     @Override 
-    public boolean existsAny() {
-        return this.warehouseRepo.existsAny();
-    }
-
-    @Override 
     public boolean existsById(String warehouseId) {
         return this.warehouseRepo.existsById(warehouseId);
     }

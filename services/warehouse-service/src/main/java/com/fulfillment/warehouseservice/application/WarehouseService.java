@@ -11,7 +11,6 @@ public interface WarehouseService {
     Warehouse create(CreateWarehouseCommand command);
     Warehouse getById(String warehouseId);
     List<Warehouse> getAll();
-    boolean existsAny();
     boolean existsById(String warehouseId);
 
     void startPicking(WarehouseStartFlowCommand command);

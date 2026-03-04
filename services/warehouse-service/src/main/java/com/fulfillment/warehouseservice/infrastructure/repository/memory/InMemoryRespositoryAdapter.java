@@ -43,11 +43,6 @@ public class InMemoryRespositoryAdapter implements WarehouseRepository {
     }
 
     @Override
-    public boolean existsAny() {
-        return !db.isEmpty();
-    }
-
-    @Override
     public boolean existsById(String warehouseId) {
         return db.containsKey(warehouseId);
     }

@@ -61,15 +61,6 @@ public class DynamoWarehouseRepositoryAdapter implements WarehouseRepository{
     }
 
     @Override
-    public boolean existsAny() {
-        return table.scan(r -> r.limit(1))
-            .items()
-            .stream()
-            .findAny()
-            .isPresent();
-    }
-
-    @Override
     public boolean existsById(String warehouseId) {
         WarehouseEntity entity = table.getItem(
             r -> r.key(k -> k.partitionValue(warehouseId))
