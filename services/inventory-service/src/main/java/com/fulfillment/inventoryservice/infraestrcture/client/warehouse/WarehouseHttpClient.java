@@ -22,7 +22,7 @@ public class WarehouseHttpClient implements WarehouseClient{
     @Override
     public boolean existsById(String warehouseId) {
         ResponseEntity<Void> response = client.head()
-            .uri("/api/v1/warehouses/{id}", warehouseId)
+            .uri("/internal/v1/warehouses/{id}", warehouseId)
             .exchange((request, clientResponse) -> 
                 ResponseEntity.status(clientResponse.getStatusCode()).build()
             );

@@ -23,14 +23,14 @@ public class WarehouseHttpClient implements WarehouseClient {
     @Override
     public Mono<Boolean> existsById(String warehouseId) {
         return webClient.head()
-            .uri("/api/v1/warehouses/{id}", warehouseId)
+            .uri("/internal/v1/warehouses/{id}", warehouseId)
             .exchangeToMono(response -> Mono.just(response.statusCode().is2xxSuccessful()));
     }
 
     @Override
     public Mono<List<WarehouseSummary>> listWarehouses() {
         return webClient.get()
-            .uri("/api/v1/warehouses")
+            .uri("/internal/v1/warehouses")
             .retrieve()
             .bodyToFlux(WarehouseListResponse.class)
             .filter(w -> w.lat() != null && w.lng() != null)

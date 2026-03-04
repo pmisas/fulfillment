@@ -30,7 +30,7 @@ public class InventoryHttpClient implements InventoryClient {
             .toList();
 
         return webClient.post()
-            .uri("/api/v1/warehouses/{warehouseId}/reservations", warehouseId)
+            .uri("/internal/v1/warehouses/{warehouseId}/reservations", warehouseId)
             .bodyValue(new ReserveRequest(reservationId, orderId, dtoItems))
             .exchangeToMono(response -> switch (response.statusCode().value()) {
                 case 201 -> Mono.just(ReserveResult.RESERVED);
@@ -44,7 +44,7 @@ public class InventoryHttpClient implements InventoryClient {
     @Override
     public Mono<Void> releaseReservation(String reservationId) {
         return webClient.delete()
-            .uri("/api/v1/reservations/{reservationId}", reservationId)
+            .uri("/internal/v1/reservations/{reservationId}", reservationId)
             .retrieve()
             .toBodilessEntity()
             .then();
@@ -57,7 +57,7 @@ public class InventoryHttpClient implements InventoryClient {
             .toList();
 
         return webClient.post()
-            .uri("/api/v1/warehouses/{warehouseId}/inventory/availability", warehouseId)
+            .uri("/internal/v1/warehouses/{warehouseId}/inventory/availability", warehouseId)
             .bodyValue(new AvailabilityRequest(dtoItems))
             .retrieve()
             .bodyToMono(AvailabilityResponse.class)
