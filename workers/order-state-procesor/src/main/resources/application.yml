@@ -9,5 +9,5 @@ server:
 
 logging:
   level:
-    org.springframework.web: INFO
-    com.fulfillment: INFO
+    "[org.springframework.web]": INFO
+    "[com.fulfillment]": INFO

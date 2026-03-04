@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "warehouse.service.base-url",
+      "type": "java.lang.String",
+      "description": "Base URL for the warehouse service."
+    },
+    {
+      "name": "aws.region",
+      "type": "java.lang.String",
+      "description": "AWS region for DynamoDB and other AWS services."
+    },
+    {
+      "name": "aws.dynamodb.inventory-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for inventory items."
+    },
+    {
+      "name": "aws.dynamodb.reservation-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for inventory reservations."
+    },
+    {
+      "name": "aws.dynamodb.endpoint",
+      "type": "java.lang.String",
+      "description": "Optional DynamoDB endpoint URL for local development."
+    }
+  ]
+}

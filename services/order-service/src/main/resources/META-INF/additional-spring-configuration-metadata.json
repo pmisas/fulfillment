@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "aws.region",
+      "type": "java.lang.String",
+      "description": "AWS region for DynamoDB and other AWS services."
+    },
+    {
+      "name": "aws.dynamodb.orders-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for orders."
+    },
+    {
+      "name": "aws.dynamodb.history-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for order state history."
+    },
+    {
+      "name": "aws.dynamodb.outbox-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for outbox events."
+    },
+    {
+      "name": "aws.dynamodb.endpoint",
+      "type": "java.lang.String",
+      "description": "Optional DynamoDB endpoint URL for local development."
+    }
+  ]
+}

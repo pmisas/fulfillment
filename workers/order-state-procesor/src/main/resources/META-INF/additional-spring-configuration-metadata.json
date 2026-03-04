@@ -1,0 +1,59 @@
+{
+  "properties": [
+    {
+      "name": "worker.maxConcurrentProcessing",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of concurrent message processing tasks."
+    },
+    {
+      "name": "aws.region",
+      "type": "java.lang.String",
+      "description": "AWS region for SQS, DynamoDB and other AWS services."
+    },
+    {
+      "name": "aws.sqs.queueUrl",
+      "type": "java.lang.String",
+      "description": "SQS queue URL for order events."
+    },
+    {
+      "name": "aws.sqs.waitTimeSeconds",
+      "type": "java.lang.Integer",
+      "description": "SQS long polling wait time in seconds."
+    },
+    {
+      "name": "aws.sqs.maxMessages",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of messages to retrieve from SQS in a single request."
+    },
+    {
+      "name": "aws.sqs.visibilityTimeoutSeconds",
+      "type": "java.lang.Integer",
+      "description": "SQS message visibility timeout in seconds."
+    },
+    {
+      "name": "aws.dynamodb.ordersTable",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for orders."
+    },
+    {
+      "name": "aws.dynamodb.historyTable",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for order state history."
+    },
+    {
+      "name": "aws.dynamodb.endpoint",
+      "type": "java.lang.String",
+      "description": "Optional DynamoDB endpoint URL for local development."
+    },
+    {
+      "name": "services.warehouse.baseUrl",
+      "type": "java.lang.String",
+      "description": "Base URL for the warehouse service."
+    },
+    {
+      "name": "services.inventory.baseUrl",
+      "type": "java.lang.String",
+      "description": "Base URL for the inventory service."
+    }
+  ]
+}
