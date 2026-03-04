@@ -13,7 +13,6 @@ import com.fulfillment.orderstateprocesor.domain.model.Order;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
-import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient.AvailabilityResult;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient.ReserveResult;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;

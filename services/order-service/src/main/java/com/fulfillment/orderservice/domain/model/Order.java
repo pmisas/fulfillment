@@ -102,12 +102,8 @@ public class Order {
             orderId, warehouseId, status, createdAt, updatedAt, lat, lng, items);
     }
 
-    public void cancel() {
-        if (this.status == OrderStatus.SHIPPED) {
-            throw new IllegalStateException("Cannot cancel a shipped order");
-        }
-
-        this.status = OrderStatus.CANCELLED;
+    public Order cancel() {
+        return this.withStatus(Status.CANCELED);
     }
 
 }

@@ -18,19 +18,20 @@ import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 
 @Component
 @Profile("cloud")
 public class DynamoOrderWriteTransaction implements OrderWriteTransaction {
 
     private static final Expression ORDER_MUST_NOT_EXIST =
-            Expression.builder().expression("attribute_not_exists(orderId)").build();
+        Expression.builder().expression("attribute_not_exists(orderId)").build();
 
     private static final Expression HISTORY_MUST_NOT_EXIST =
-            Expression.builder().expression("attribute_not_exists(orderId)").build();
+        Expression.builder().expression("attribute_not_exists(orderId)").build();
 
     private static final Expression OUTBOX_MUST_NOT_EXIST =
-            Expression.builder().expression("attribute_not_exists(eventId)").build();
+        Expression.builder().expression("attribute_not_exists(eventId)").build();
 
     private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<OrderEntity> ordersTable;
@@ -38,10 +39,10 @@ public class DynamoOrderWriteTransaction implements OrderWriteTransaction {
     private final DynamoDbTable<OutboxEventEntity> outboxTable;
 
     public DynamoOrderWriteTransaction(
-            DynamoDbEnhancedClient enhancedClient,
-            @Value("${aws.dynamodb.orders-table}")  String ordersTableName,
-            @Value("${aws.dynamodb.history-table}") String historyTableName,
-            @Value("${aws.dynamodb.outbox-table}")  String outboxTableName) {
+        DynamoDbEnhancedClient enhancedClient,
+        @Value("${aws.dynamodb.orders-table}")  String ordersTableName,
+        @Value("${aws.dynamodb.history-table}") String historyTableName,
+        @Value("${aws.dynamodb.outbox-table}")  String outboxTableName) {
 
         this.enhancedClient = enhancedClient;
         this.ordersTable  = enhancedClient.table(ordersTableName,  TableSchema.fromBean(OrderEntity.class));
@@ -51,33 +52,65 @@ public class DynamoOrderWriteTransaction implements OrderWriteTransaction {
 
     @Override
     public void createOrderWithHistoryAndOutbox(
-            Order order,
-            OrderStateHistory initialHistory,
-            OutboxPendingEvent outboxEvent) {
+        Order order,
+        OrderStateHistory initialHistory,
+        OutboxPendingEvent outboxEvent) {
 
         PutItemEnhancedRequest<OrderEntity> putOrder =
-                PutItemEnhancedRequest.builder(OrderEntity.class)
-                        .item(OrderEntityMapper.toEntity(order))
-                        .conditionExpression(ORDER_MUST_NOT_EXIST)
-                        .build();
+            PutItemEnhancedRequest.builder(OrderEntity.class)
+                .item(OrderEntityMapper.toEntity(order))
+                .conditionExpression(ORDER_MUST_NOT_EXIST)
+                .build();
 
         PutItemEnhancedRequest<OrderStateHistoryEntity> putHistory =
-                PutItemEnhancedRequest.builder(OrderStateHistoryEntity.class)
-                        .item(OrderEntityMapper.toEntity(initialHistory))
-                        .conditionExpression(HISTORY_MUST_NOT_EXIST)
-                        .build();
+            PutItemEnhancedRequest.builder(OrderStateHistoryEntity.class)
+                .item(OrderEntityMapper.toEntity(initialHistory))
+                .conditionExpression(HISTORY_MUST_NOT_EXIST)
+                .build();
 
         PutItemEnhancedRequest<OutboxEventEntity> putOutbox =
-                PutItemEnhancedRequest.builder(OutboxEventEntity.class)
-                        .item(OrderEntityMapper.toEntity(outboxEvent))
-                        .conditionExpression(OUTBOX_MUST_NOT_EXIST)
-                        .build();
+            PutItemEnhancedRequest.builder(OutboxEventEntity.class)
+                .item(OrderEntityMapper.toEntity(outboxEvent))
+                .conditionExpression(OUTBOX_MUST_NOT_EXIST)
+                .build();
 
         TransactWriteItemsEnhancedRequest tx = TransactWriteItemsEnhancedRequest.builder()
-                .addPutItem(ordersTable, putOrder)
-                .addPutItem(historyTable, putHistory)
-                .addPutItem(outboxTable, putOutbox)
+            .addPutItem(ordersTable, putOrder)
+            .addPutItem(historyTable, putHistory)
+            .addPutItem(outboxTable, putOutbox)
+            .build();
+
+        enhancedClient.transactWriteItems(tx);
+    }
+
+    @Override
+    public void updateOrderWithHistoryAndOutbox(
+        Order newOrder,
+        OrderStateHistory history,
+        OutboxPendingEvent outboxEvent) {
+         
+        UpdateItemEnhancedRequest<OrderEntity> updateOrder =
+            UpdateItemEnhancedRequest.builder(OrderEntity.class)
+                .item(OrderEntityMapper.toEntity(newOrder))
                 .build();
+
+        PutItemEnhancedRequest<OrderStateHistoryEntity> putHistory =
+            PutItemEnhancedRequest.builder(OrderStateHistoryEntity.class)
+                .item(OrderEntityMapper.toEntity(history))
+                .conditionExpression(HISTORY_MUST_NOT_EXIST)
+                .build();
+
+        PutItemEnhancedRequest<OutboxEventEntity> putOutbox =
+            PutItemEnhancedRequest.builder(OutboxEventEntity.class)
+                .item(OrderEntityMapper.toEntity(outboxEvent))
+                .conditionExpression(OUTBOX_MUST_NOT_EXIST)
+                .build();
+
+        TransactWriteItemsEnhancedRequest tx = TransactWriteItemsEnhancedRequest.builder()
+            .addUpdateItem(ordersTable, updateOrder)
+            .addPutItem(historyTable, putHistory)
+            .addPutItem(outboxTable, putOutbox)
+            .build();
 
         enhancedClient.transactWriteItems(tx);
     }

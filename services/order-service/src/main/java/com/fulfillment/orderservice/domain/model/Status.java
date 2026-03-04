@@ -16,7 +16,7 @@ public enum Status {
         RECEIVED, Set.of(VALIDATED, REJECTED, CANCELED),
         VALIDATED, Set.of(PICKED, CANCELED),
         PICKED, Set.of(PACKED, CANCELED),
-        PACKED, Set.of(SHIPPED),
+        PACKED, Set.of(SHIPPED, CANCELED),
         SHIPPED, Set.of(),
         REJECTED, Set.of(),
         CANCELED, Set.of()
