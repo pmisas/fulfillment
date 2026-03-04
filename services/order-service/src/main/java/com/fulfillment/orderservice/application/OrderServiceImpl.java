@@ -15,6 +15,7 @@ import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderItem;
 import com.fulfillment.orderservice.domain.model.OrderStateHistory;
+import com.fulfillment.orderservice.domain.model.Status;
 import com.fulfillment.orderservice.domain.ports.IdempotencyStore;
 import com.fulfillment.orderservice.domain.ports.OrderRepository;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction;
@@ -132,35 +133,38 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order cancel(String orderId) {
-
-        Order order = getById(orderId);
     
-        if (order.getStatus().name().equals("SHIPPED")) {
+        Order current = getById(orderId);
+    
+        if (current.getStatus() == Status.SHIPPED) {
             throw new IllegalStateException("Cannot cancel a shipped order");
         }
-        if (order.getStatus().name().equals("CANCELLED")) {
-            return order;
+    
+        if (current.getStatus() == Status.CANCELED) {
+            return current;
         }
-
-        order.cancel(); 
+    
+        Order cancelled = current.withStatus(Status.CANCELED);
+    
         OrderStateHistory history = OrderStateHistory.createOrderStateHistory(
             UUID.randomUUID().toString(),
-            order.getOrderId()
+            cancelled.getOrderId()
         );
-
+    
         String eventType = "OrderCancelled";
-        String eventId = "OrderCancelled:" + order.getOrderId();
+        String eventId = "OrderCancelled:" + cancelled.getOrderId();
+    
         OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
             eventId,
             "ORDER",
-            order.getOrderId(),
+            cancelled.getOrderId(),
             eventType,
-            buildOrderCancelledPayload(order, "USER_REQUEST")
+            buildOrderCancelledPayload(cancelled, "USER_REQUEST")
         );
-
-        orderWriteTransaction.updateOrderWithHistoryAndOutbox(order, history, outboxEvent);
-
-        return order;
+    
+        orderWriteTransaction.updateOrderWithHistoryAndOutbox(cancelled, history, outboxEvent);
+    
+        return cancelled;
     }
     
     private String buildOrderReceivedPayload(Order order) {
