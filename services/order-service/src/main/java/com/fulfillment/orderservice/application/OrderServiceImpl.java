@@ -130,6 +130,39 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
     }
 
+    @Override
+    public Order cancel(String orderId) {
+
+        Order order = getById(orderId);
+    
+        if (order.getStatus().name().equals("SHIPPED")) {
+            throw new IllegalStateException("Cannot cancel a shipped order");
+        }
+        if (order.getStatus().name().equals("CANCELLED")) {
+            return order;
+        }
+
+        order.cancel(); 
+        OrderStateHistory history = OrderStateHistory.createOrderStateHistory(
+            UUID.randomUUID().toString(),
+            order.getOrderId()
+        );
+
+        String eventType = "OrderCancelled";
+        String eventId = "OrderCancelled:" + order.getOrderId();
+        OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
+            eventId,
+            "ORDER",
+            order.getOrderId(),
+            eventType,
+            buildOrderCancelledPayload(order, "USER_REQUEST")
+        );
+
+        orderWriteTransaction.updateOrderWithHistoryAndOutbox(order, history, outboxEvent);
+
+        return order;
+    }
+    
     private String buildOrderReceivedPayload(Order order) {
         try {
             var payload = new OrderReceivedEventPayload(
@@ -146,5 +179,16 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    private String buildOrderCancelledPayload(Order order, String reason) {
+        try {
+            var payload = new com.fulfillment.orderservice.application.dto.OrderCancelledEventPayload(
+                order.getOrderId(),
+                reason
+            );
+            return mapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize OrderCancelled payload: " + e.getMessage(), e);
+        }
+    }
     
 }

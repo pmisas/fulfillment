@@ -6,4 +6,5 @@ import com.fulfillment.orderservice.domain.model.Order;
 public interface OrderService {
     Order create(CreateOrderCommand command, String idempotencyKey);
     Order getById(String orderId);
+    Order cancel(String orderId);
 }
