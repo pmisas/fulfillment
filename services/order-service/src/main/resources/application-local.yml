@@ -8,4 +8,6 @@ aws:
     orders-table: Orders
     history-table: OrdersStateHistory
     outbox-table: OutboxEvents
+  xray:
+    enabled: false
     

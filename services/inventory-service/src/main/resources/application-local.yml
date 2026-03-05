@@ -10,4 +10,6 @@ aws:
   dynamodb:
     endpoint: "http://localhost:8000"
     inventory-table: InventoryItems
+  xray:
+    enabled: false
     

@@ -19,7 +19,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
 
-                .requestMatchers("/health", "/actuator/health").permitAll()
+                .requestMatchers("/health", "/actuator/**").permitAll()
 
                 .requestMatchers("/internal/v1/**").permitAll()
 

@@ -7,8 +7,12 @@ aws:
     orders-table: ${ORDER_TABLE_NAME}
     history-table: ${ORDER_HISTORY_TABLE_NAME}
     outbox-table: ${OUTBOX_TABLE_NAME}
+  xray:
+    enabled: true
 
 spring:
+  application:
+    name: order-service
   data:
     redis:
       host: ${REDIS_HOST}
@@ -18,3 +22,29 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${COGNITO_ISSUER_URI}
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:cloud}
+      region: ${aws.region}
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.fulfillment: DEBUG
+    com.amazonaws.xray: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

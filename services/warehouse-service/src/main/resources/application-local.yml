@@ -6,3 +6,5 @@ aws:
   dynamodb:
     endpoint: "http://localhost:8000"
     warehouses-table: Warehouses
+  xray:
+    enabled: false
