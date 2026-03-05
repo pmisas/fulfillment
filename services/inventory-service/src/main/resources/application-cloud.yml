@@ -10,10 +10,54 @@ aws:
   dynamodb:
     inventory-table: ${INVENTORY_TABLE_NAME}
     reservation-table: ${RESERVATION_TABLE_NAME}
+  xray:
+    enabled: true
 
 spring:
+  application:
+    name: inventory-service
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: ${COGNITO_ISSUER_URI}
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info,httptrace,env
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  metrics:
+    export:
+      cloudwatch:
+        namespace: Fulfillment/InventoryService
+        batch-size: 20
+        step: 1m
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:cloud}
+      region: ${aws.region}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s,2s
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.fulfillment: DEBUG
+    com.amazonaws.xray: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

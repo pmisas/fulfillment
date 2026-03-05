@@ -7,8 +7,12 @@ aws:
     orders-table: ${ORDER_TABLE_NAME}
     history-table: ${ORDER_HISTORY_TABLE_NAME}
     outbox-table: ${OUTBOX_TABLE_NAME}
+  xray:
+    enabled: true
 
 spring:
+  application:
+    name: order-service
   data:
     redis:
       host: ${REDIS_HOST}
@@ -18,3 +22,43 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${COGNITO_ISSUER_URI}
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info,httptrace,env
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  metrics:
+    export:
+      cloudwatch:
+        namespace: Fulfillment/OrderService
+        batch-size: 20
+        step: 1m
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:cloud}
+      region: ${aws.region}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s,2s
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.fulfillment: DEBUG
+    com.amazonaws.xray: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
