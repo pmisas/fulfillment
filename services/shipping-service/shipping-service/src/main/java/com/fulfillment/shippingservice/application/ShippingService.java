@@ -21,5 +21,4 @@ public interface ShippingService {
 
     Shipment markAsDelivered(String shipmentId);
 
-    Shipment cancel(String shipmentId);
 }

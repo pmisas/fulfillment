@@ -79,11 +79,6 @@ public class ShippingServiceImpl implements ShippingService {
         return transitionStatus(shipmentId, ShipmentStatus.DELIVERED);
     }
 
-    @Override
-    public Shipment cancel(String shipmentId) {
-        return transitionStatus(shipmentId, ShipmentStatus.CANCELLED);
-    }
-
     private Shipment transitionStatus(String shipmentId, ShipmentStatus targetStatus) {
         Shipment updated = getById(shipmentId).withStatus(targetStatus);
         return shipmentRepository.save(updated);
