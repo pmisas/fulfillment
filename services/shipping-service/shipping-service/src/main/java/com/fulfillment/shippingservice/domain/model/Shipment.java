@@ -1,9 +1,14 @@
-package com.example.shipping.model;
+package com.fulfillment.shippingservice.domain.model;
 
-import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
+import static com.fulfillment.shippingservice.domain.shared.DomainValidations.requireNonBlank;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
+
+import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
+
+import lombok.Getter;
 
 @Getter
 public class Shipment {
@@ -44,7 +49,9 @@ public class Shipment {
 
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
         this.shippedAt = shippedAt;
-        this.estimatedDeliveryAt = Objects.requireNonNull(estimatedDeliveryAt, "estimatedDeliveryAt must not be null");
+        this.estimatedDeliveryAt = Objects.requireNonNull(
+                estimatedDeliveryAt,
+                "estimatedDeliveryAt must not be null");
     }
 
     public static Shipment createShipment(
@@ -56,35 +63,77 @@ public class Shipment {
             Instant estimatedDeliveryAt) {
         Instant now = Instant.now();
         return new Shipment(
-            shipmentId,
-            orderId,
-            warehouseId,
-            carrier,
-            ShipmentStatus.PENDING,
-            null,
-            items,
-            now,
-            null,
-            estimatedDeliveryAt
-        );
+                shipmentId,
+                orderId,
+                warehouseId,
+                carrier,
+                ShipmentStatus.PENDING,
+                null,
+                items,
+                now,
+                null,
+                estimatedDeliveryAt);
+    }
+
+    public static Shipment restore(
+            String shipmentId,
+            String orderId,
+            String warehouseId,
+            CarrierCode carrier,
+            ShipmentStatus status,
+            String trackingId,
+            List<ShipmentItem> items,
+            Instant createdAt,
+            Instant shippedAt,
+            Instant estimatedDeliveryAt) {
+        return new Shipment(
+                shipmentId,
+                orderId,
+                warehouseId,
+                carrier,
+                status,
+                trackingId,
+                items,
+                createdAt,
+                shippedAt,
+                estimatedDeliveryAt);
+    }
+
+    public Shipment withTrackingId(String trackingId) {
+        return new Shipment(
+                this.shipmentId,
+                this.orderId,
+                this.warehouseId,
+                this.carrier,
+                this.status,
+                requireNonBlank(trackingId, "trackingId"),
+                this.items,
+                this.createdAt,
+                this.shippedAt,
+                this.estimatedDeliveryAt);
     }
 
     public Shipment withStatus(ShipmentStatus newStatus) {
-        if (!this.status.canTransitionTo(newStatus)) {
-            throw new InvalidStatusTransitionException(this.status, newStatus);
+        ShipmentStatus targetStatus = Objects.requireNonNull(newStatus, "newStatus must not be null");
+        if (!this.status.canTransitionTo(targetStatus)) {
+            throw new InvalidStatusTransitionException(this.status, targetStatus);
         }
-        return new Shipment(
-            this.shipmentId,
-            this.orderId,
-            this.warehouseId,
-            this.carrier,
-            Objects.requireNonNull(newStatus),
-            this.trackingId,
-            this.items,
-            this.createdAt,
-            Instant.now(),
-            this.estimatedDeliveryAt
-        );
-    }
 
+        Instant nextShippedAt = this.shippedAt;
+        if (targetStatus == ShipmentStatus.SHIPPED && this.shippedAt == null) {
+            nextShippedAt = Instant.now();
+        }
+
+        return new Shipment(
+                this.shipmentId,
+                this.orderId,
+                this.warehouseId,
+                this.carrier,
+                targetStatus,
+                this.trackingId,
+                this.items,
+                this.createdAt,
+                nextShippedAt,
+                this.estimatedDeliveryAt);
+    }
 }
