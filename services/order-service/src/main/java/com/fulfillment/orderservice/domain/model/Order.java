@@ -76,7 +76,8 @@ public class Order {
             this.items
         );
     }
-     public Order withWarehouse(String warehouseId) {
+
+    public Order withWarehouse(String warehouseId) {
         return new Order(
             this.orderId,
             warehouseId,
