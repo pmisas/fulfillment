@@ -9,6 +9,8 @@ import com.fulfillment.orderstateprocesor.domain.exception.OrderNotFoundExceptio
 import com.fulfillment.orderstateprocesor.domain.model.Order;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
+import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
+import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient.ConsumeResult;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.WarehouseOrderActionEvent;
@@ -25,20 +27,23 @@ public class OrderPackedHandler implements OrderEventHandler {
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
     private final OrderStateHistoryRepository historyRepo;
+    private final InventoryClient inventoryClient;
 
     public OrderPackedHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo
+        OrderStateHistoryRepository historyRepo,
+        InventoryClient inventoryClient
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
         this.historyRepo = historyRepo;
+        this.inventoryClient = inventoryClient;
     }
 
     @Override
     public String eventType() {
-        return "PackingStarted";
+        return "PackingCompleted";
     }
 
     @Override
@@ -72,9 +77,14 @@ public class OrderPackedHandler implements OrderEventHandler {
 
         Order next = order.withStatus(Status.PACKED);
 
+        String reservationId = "resv:" + order.getOrderId();
+
         return orderRepo.save(next)
             .then(historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED)))
-            .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId));
+            .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId))
+            .then(inventoryClient.consumeReservation(reservationId)
+                .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}", reservationId, order.getOrderId(), result))
+                .then());
     }
 
     private WarehouseOrderActionEvent parse(String json) {
