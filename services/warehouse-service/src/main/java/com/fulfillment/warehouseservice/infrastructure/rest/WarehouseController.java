@@ -56,29 +56,23 @@ public class WarehouseController {
                 .toList();
     }
 
-    @PostMapping("/{warehouseId}/orders/{orderId}/picking/start")
-    public ResponseEntity<Void> startPicking(
-                @PathVariable String warehouseId, 
-                @PathVariable String orderId) { 
+    @PostMapping("/{warehouseId}/orders/{orderId}/picking/complete")
+    public ResponseEntity<Void> completePicking(
+                @PathVariable String warehouseId,
+                @PathVariable String orderId) {
 
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(
-                warehouseId, 
-                orderId
-        );
-        warehouseService.startPicking(command);
+        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(warehouseId, orderId);
+        warehouseService.completePicking(command);
         return ResponseEntity.accepted().build();
     }
 
-    @PostMapping("/{warehouseId}/orders/{orderId}/packing/start")
-    public ResponseEntity<Void> startPacking(
-                @PathVariable String warehouseId, 
-                @PathVariable String orderId) { 
+    @PostMapping("/{warehouseId}/orders/{orderId}/packing/complete")
+    public ResponseEntity<Void> completePacking(
+                @PathVariable String warehouseId,
+                @PathVariable String orderId) {
 
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(
-                warehouseId, 
-                orderId
-        );
-        warehouseService.startPacking(command);
+        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(warehouseId, orderId);
+        warehouseService.completePacking(command);
         return ResponseEntity.accepted().build();
     }
 

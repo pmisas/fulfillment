@@ -64,13 +64,13 @@ public class WarehouseServiceImpl implements WarehouseService{
     }
 
     @Override
-    public void startPicking(WarehouseStartFlowCommand command) {
-        publishWarehouseFlowEvent(command, "PickingStarted");
+    public void completePicking(WarehouseStartFlowCommand command) {
+        publishWarehouseFlowEvent(command, "PickingCompleted");
     }
 
     @Override
-    public void startPacking(WarehouseStartFlowCommand command) {
-        publishWarehouseFlowEvent(command, "PackingStarted");
+    public void completePacking(WarehouseStartFlowCommand command) {
+        publishWarehouseFlowEvent(command, "PackingCompleted");
     }
 
     private void publishWarehouseFlowEvent(WarehouseStartFlowCommand command, String eventType) {
