@@ -6,16 +6,13 @@ import java.util.Set;
 public enum ShipmentStatus {
     PENDING,
     SHIPPED,
-    IN_TRANSIT,
-    DELIVERED,
-    CANCELLED;
+    DELIVERED;
 
     private static final Map<ShipmentStatus, Set<ShipmentStatus>> ALLOWED = Map.of(
-            PENDING, Set.of(SHIPPED, CANCELLED),
-            SHIPPED, Set.of(IN_TRANSIT, CANCELLED),
-            IN_TRANSIT, Set.of(DELIVERED, CANCELLED),
-            DELIVERED, Set.of(),
-            CANCELLED, Set.of());
+        PENDING, Set.of(SHIPPED),
+        SHIPPED, Set.of(DELIVERED),
+        DELIVERED, Set.of()
+    );
 
     public boolean canTransitionTo(ShipmentStatus target) {
         return ALLOWED.getOrDefault(this, Set.of()).contains(target);

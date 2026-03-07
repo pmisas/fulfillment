@@ -13,13 +13,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.shippingservice.application.ShippingService;
-import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
 import com.fulfillment.shippingservice.domain.model.Shipment;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.CreateShipmentRequest;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.MarkShippedRequest;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.ShipmentResponse;
-
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/shipments")
@@ -29,14 +25,6 @@ public class ShippingController {
 
     public ShippingController(ShippingService shippingService) {
         this.shippingService = shippingService;
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ShipmentResponse createShipment(@Valid @RequestBody CreateShipmentRequest request) {
-        CreateShipmentCommand command = ShipmentRestMapper.toCommand(request);
-        Shipment shipment = shippingService.create(command);
-        return ShipmentRestMapper.toResponse(shipment);
     }
 
     @GetMapping("/{id}")

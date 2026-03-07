@@ -5,22 +5,37 @@ import static com.fulfillment.shippingservice.domain.shared.DomainValidations.re
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
+import com.fulfillment.shippingservice.application.dto.ShipmentShippedPayload;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
 import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.domain.model.ShipmentItem;
 import com.fulfillment.shippingservice.domain.model.ShipmentStatus;
+import com.fulfillment.shippingservice.domain.ports.OutboxEventsRepository;
+import com.fulfillment.shippingservice.domain.ports.OutboxEventsRepository.OutboxPendingEvent;
 import com.fulfillment.shippingservice.domain.ports.ShipmentRepository;
 
 @Service
 public class ShippingServiceImpl implements ShippingService {
 
-    private final ShipmentRepository shipmentRepository;
+    private static final Logger log = LoggerFactory.getLogger(ShippingServiceImpl.class);
 
-    public ShippingServiceImpl(ShipmentRepository shipmentRepository) {
+    private final ShipmentRepository shipmentRepository;
+    private final OutboxEventsRepository outboxRepo;
+    private final ObjectMapper mapper;
+
+    public ShippingServiceImpl(
+            ShipmentRepository shipmentRepository,
+            OutboxEventsRepository outboxRepo,
+            ObjectMapper mapper) {
         this.shipmentRepository = shipmentRepository;
+        this.outboxRepo = outboxRepo;
+        this.mapper = mapper;
     }
 
     @Override
@@ -66,7 +81,23 @@ public class ShippingServiceImpl implements ShippingService {
                 .withTrackingId(trackingId)
                 .withStatus(ShipmentStatus.SHIPPED);
 
-        return shipmentRepository.save(current);
+        Shipment saved = shipmentRepository.save(current);
+
+        String eventId = "ShipmentShipped:" + saved.getShipmentId();
+        OutboxPendingEvent event = new OutboxPendingEvent(
+                eventId,
+                "SHIPMENT",
+                saved.getShipmentId(),
+                "ShipmentShipped",
+                buildShipmentShippedPayload(saved));
+
+        boolean inserted = outboxRepo.savePendingIfAbsent(event);
+        if (!inserted) {
+            outboxRepo.resetToPendingIfProcessed(eventId);
+        }
+        log.info("ShipmentShipped outbox event queued for shipmentId={} orderId={}", saved.getShipmentId(), saved.getOrderId());
+
+        return saved;
     }
 
     @Override
@@ -82,5 +113,14 @@ public class ShippingServiceImpl implements ShippingService {
     private Shipment transitionStatus(String shipmentId, ShipmentStatus targetStatus) {
         Shipment updated = getById(shipmentId).withStatus(targetStatus);
         return shipmentRepository.save(updated);
+    }
+
+    private String buildShipmentShippedPayload(Shipment shipment) {
+        try {
+            return mapper.writeValueAsString(
+                    new ShipmentShippedPayload(shipment.getOrderId(), shipment.getShipmentId(), shipment.getTrackingId()));
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize ShipmentShipped payload: " + e.getMessage(), e);
+        }
     }
 }

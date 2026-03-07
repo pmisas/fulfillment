@@ -20,3 +20,5 @@ services:
     baseUrl: ${WAREHOUSE_BASE_URL}
   inventory:
     baseUrl: ${INVENTORY_BASE_URL}
+  shipping:
+    baseUrl: ${SHIPPING_BASE_URL}

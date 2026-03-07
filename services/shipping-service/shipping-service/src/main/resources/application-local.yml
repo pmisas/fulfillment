@@ -6,3 +6,4 @@ aws:
   dynamodb:
     endpoint: "http://localhost:8000"
     shipments-table: Shipments
+    outbox-table: ShippingOutbox
