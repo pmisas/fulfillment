@@ -40,6 +40,12 @@ public class ShippingServiceImpl implements ShippingService {
 
     @Override
     public Shipment create(CreateShipmentCommand command) {
+        List<Shipment> existing = shipmentRepository.findByOrderId(command.orderId());
+        if (!existing.isEmpty()) {
+            log.info("Shipment already exists for orderId={}, returning existing (idempotent)", command.orderId());
+            return existing.get(0);
+        }
+
         String shipmentId = UUID.randomUUID().toString();
 
         List<ShipmentItem> items = command.items().stream()

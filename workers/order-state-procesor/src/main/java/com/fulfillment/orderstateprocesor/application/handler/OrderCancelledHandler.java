@@ -61,10 +61,8 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
                 log.info("Order {} current status={}", orderId, order.getStatus());
 
-                // If already canceled, this is a duplicate message - just ensure inventory is released
                 if (order.getStatus() == Status.CANCELED) {
                     log.info("Order {} already CANCELED (duplicate message - idempotent)", orderId);
-                    // Try to release anyway - operation is idempotent
                     return releaseInventoryIfNeeded(reservationId, orderId)
                         .then(Mono.empty());
                 }
@@ -90,17 +88,12 @@ public class OrderCancelledHandler implements OrderEventHandler {
             });
     }
 
-    /**
-     * Releases inventory reservation. Idempotent - safe to call multiple times.
-     * If reservation doesn't exist, operation completes successfully (already released).
-     */
     private Mono<Void> releaseInventoryIfNeeded(String reservationId, String orderId) {
         log.info("Attempting to release inventory: reservationId={}, orderId={}", reservationId, orderId);
         
         return inventoryClient.releaseReservation(reservationId)
             .doOnSuccess(v -> log.info("Successfully released reservation {} for order={}", reservationId, orderId))
             .onErrorResume(ex -> {
-                // Don't fail - reservation may not exist or already released
                 log.warn("Could not release reservation {} for order={}: {} (may not exist or already released)", 
                           reservationId, orderId, ex.getMessage());
                 return Mono.empty();
