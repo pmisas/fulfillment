@@ -1,9 +1,0 @@
-server:
-  port: 8083
-
-aws:
-  region: us-east-1
-  dynamodb:
-    endpoint: "http://localhost:8000"
-    shipments-table: Shipments
-    outbox-table: ShippingOutbox
