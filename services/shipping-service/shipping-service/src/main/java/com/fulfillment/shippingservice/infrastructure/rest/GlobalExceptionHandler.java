@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
+import com.fulfillment.shippingservice.domain.exception.ShipmentTrackingConflictException;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.ApiErrorResponse;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
 
@@ -17,6 +18,15 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ShipmentTrackingConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleTrackingConflict(
+            ShipmentTrackingConflictException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "TRACKING_CONFLICT", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
 
     @ExceptionHandler(ShipmentNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleShipmentNotFound(

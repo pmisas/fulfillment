@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
 import com.fulfillment.shippingservice.application.dto.ShipmentShippedPayload;
+import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
 import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.domain.model.ShipmentItem;
@@ -82,14 +83,51 @@ public class ShippingServiceImpl implements ShippingService {
     }
 
     @Override
-    public Shipment markAsShipped(String shipmentId, String trackingId) {
-        Shipment current = getById(shipmentId)
+    public Shipment markAsShipped(String shipmentId) {
+        String normalizedShipmentId = requireNonBlank(shipmentId, "shipmentId").trim();
+
+        Shipment current = getById(normalizedShipmentId);
+
+        if (current.getStatus() == ShipmentStatus.SHIPPED) {
+            log.info("Shipment already SHIPPED (idempotent), returning existing shipmentId={}", normalizedShipmentId);
+            return current;
+        }
+
+        String trackingId = "SHIP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+
+        Shipment candidate = current
                 .withTrackingId(trackingId)
                 .withStatus(ShipmentStatus.SHIPPED);
 
-        Shipment saved = shipmentRepository.save(current);
+        Shipment saved = shipmentRepository
+                .saveIfStatusMatches(candidate, current.getStatus())
+                .orElseThrow(() -> new InvalidStatusTransitionException(current.getStatus(), ShipmentStatus.SHIPPED));
 
+        queueShipmentShippedOutbox(saved);
+
+        return saved;
+    }
+
+    @Override
+    public Shipment markAsDelivered(String shipmentId) {
+        String normalizedShipmentId = requireNonBlank(shipmentId, "shipmentId").trim();
+
+        Shipment current = getById(normalizedShipmentId);
+
+        if (current.getStatus() == ShipmentStatus.DELIVERED) {
+            log.info("Shipment already DELIVERED (idempotent), returning existing shipmentId={}", normalizedShipmentId);
+            return current;
+        }
+
+        Shipment updated = current.withStatus(ShipmentStatus.DELIVERED);
+
+        return shipmentRepository.saveIfStatusMatches(updated, current.getStatus())
+                .orElseThrow(() -> new InvalidStatusTransitionException(current.getStatus(), ShipmentStatus.DELIVERED));
+    }
+    
+    private void queueShipmentShippedOutbox(Shipment saved) {
         String eventId = "ShipmentShipped:" + saved.getShipmentId();
+
         OutboxPendingEvent event = new OutboxPendingEvent(
                 eventId,
                 "SHIPMENT",
@@ -101,30 +139,18 @@ public class ShippingServiceImpl implements ShippingService {
         if (!inserted) {
             outboxRepo.resetToPendingIfProcessed(eventId);
         }
-        log.info("ShipmentShipped outbox event queued for shipmentId={} orderId={}", saved.getShipmentId(), saved.getOrderId());
 
-        return saved;
-    }
-
-    @Override
-    public Shipment markInTransit(String shipmentId) {
-        return transitionStatus(shipmentId, ShipmentStatus.IN_TRANSIT);
-    }
-
-    @Override
-    public Shipment markAsDelivered(String shipmentId) {
-        return transitionStatus(shipmentId, ShipmentStatus.DELIVERED);
-    }
-
-    private Shipment transitionStatus(String shipmentId, ShipmentStatus targetStatus) {
-        Shipment updated = getById(shipmentId).withStatus(targetStatus);
-        return shipmentRepository.save(updated);
+        log.info("ShipmentShipped outbox event queued for shipmentId={} orderId={}",
+                saved.getShipmentId(), saved.getOrderId());
     }
 
     private String buildShipmentShippedPayload(Shipment shipment) {
         try {
             return mapper.writeValueAsString(
-                    new ShipmentShippedPayload(shipment.getOrderId(), shipment.getShipmentId(), shipment.getTrackingId()));
+                    new ShipmentShippedPayload(
+                            shipment.getOrderId(),
+                            shipment.getShipmentId(),
+                            shipment.getTrackingId()));
         } catch (Exception e) {
             throw new IllegalStateException("Failed to serialize ShipmentShipped payload: " + e.getMessage(), e);
         }

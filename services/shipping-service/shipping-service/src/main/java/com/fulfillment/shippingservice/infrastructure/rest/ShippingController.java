@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.shippingservice.application.ShippingService;
 import com.fulfillment.shippingservice.domain.model.Shipment;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.MarkShippedRequest;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.ShipmentResponse;
 
 @RestController
@@ -47,17 +45,8 @@ public class ShippingController {
 
     @PostMapping("/{id}/ship")
     @ResponseStatus(HttpStatus.OK)
-    public ShipmentResponse markAsShipped(
-            @PathVariable("id") String shipmentId,
-            @Valid @RequestBody MarkShippedRequest request) {
-        Shipment shipment = shippingService.markAsShipped(shipmentId, request.trackingId());
-        return ShipmentRestMapper.toResponse(shipment);
-    }
-
-    @PostMapping("/{id}/in-transit")
-    @ResponseStatus(HttpStatus.OK)
-    public ShipmentResponse markInTransit(@PathVariable("id") String shipmentId) {
-        Shipment shipment = shippingService.markInTransit(shipmentId);
+    public ShipmentResponse markAsShipped(@PathVariable("id") String shipmentId) {
+        Shipment shipment = shippingService.markAsShipped(shipmentId);
         return ShipmentRestMapper.toResponse(shipment);
     }
 

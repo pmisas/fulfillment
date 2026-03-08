@@ -11,4 +11,6 @@ public interface ShipmentRepository {
     Optional<Shipment> findById(String shipmentId);
     List<Shipment> findAll();
     List<Shipment> findByOrderId(String orderId);
+    Optional<Shipment> saveIfStatusMatches(Shipment shipment, ShipmentStatus expectedCurrentStatus);
+
 }

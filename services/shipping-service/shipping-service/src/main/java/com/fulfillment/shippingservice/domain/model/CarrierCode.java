@@ -1,4 +1,4 @@
-package com.example.shipping.model;
+package com.fulfillment.shippingservice.domain.model;
 
 public enum CarrierCode {
     INTERNAL_CARRIER
