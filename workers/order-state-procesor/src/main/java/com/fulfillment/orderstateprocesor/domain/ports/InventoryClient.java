@@ -8,6 +8,7 @@ public interface InventoryClient {
 
     Mono<ReserveResult> reserveAll(String reservationId, String orderId, String warehouseId, List<SkuQuantity> items);
     Mono<Void> releaseReservation(String reservationId);
+    Mono<ConsumeResult> consumeReservation(String reservationId);
     Mono<AvailabilityResult> checkAvailability(String warehouseId, List<SkuQuantity> items);
 
     record SkuQuantity(String sku, int quantity) {}
@@ -25,4 +26,5 @@ public interface InventoryClient {
     ) {}
 
     enum ReserveResult { RESERVED, ALREADY_RESERVED, INSUFFICIENT_STOCK }
+    enum ConsumeResult { CONSUMED, RESERVATION_NOT_FOUND }
 }

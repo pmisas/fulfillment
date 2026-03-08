@@ -1,0 +1,17 @@
+server:
+  port: 8083
+
+aws:
+  region: ${AWS_REGION}
+  dynamodb:
+    shipments-table: ${SHIPMENT_TABLE_NAME}
+    outbox-table: ${SHIPPING_OUTBOX_TABLE_NAME}
+  s3:
+    shipping-guides-bucket: fulfillment-shipping-guides
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${COGNITO_ISSUER_URI}

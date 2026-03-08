@@ -21,3 +21,5 @@ services:
     baseUrl: "http://localhost:8081"
   inventory:
     baseUrl: "http://localhost:8082"
+  shipping:
+    baseUrl: "http://localhost:8083"

@@ -54,6 +54,11 @@
       "name": "services.inventory.baseUrl",
       "type": "java.lang.String",
       "description": "Base URL for the inventory service."
+    },
+    {
+      "name": "services.shipping.baseUrl",
+      "type": "java.lang.String",
+      "description": "Base URL for the shipping service."
     }
   ]
 }

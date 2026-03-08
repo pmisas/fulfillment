@@ -58,6 +58,21 @@ public class InventoryHttpClient implements InventoryClient {
     }
 
     @Override
+    public Mono<ConsumeResult> consumeReservation(String reservationId) {
+        log.info("HTTP POST /internal/v1/reservations/{}/consume", reservationId);
+
+        return webClient.post()
+            .uri("/internal/v1/reservations/{reservationId}/consume", reservationId)
+            .retrieve()
+            .toBodilessEntity()
+            .map(r -> ConsumeResult.CONSUMED)
+            .onErrorResume(ex -> {
+                log.warn("consumeReservation failed for reservationId={}: {}", reservationId, ex.getMessage());
+                return Mono.just(ConsumeResult.RESERVATION_NOT_FOUND);
+            });
+    }
+
+    @Override
     public Mono<AvailabilityResult> checkAvailability(String warehouseId, List<SkuQuantity> items) {
         List<SkuQuantityDto> dtoItems = items.stream()
             .map(i -> new SkuQuantityDto(i.sku(), i.quantity()))

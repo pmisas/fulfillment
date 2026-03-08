@@ -13,6 +13,6 @@ public interface WarehouseService {
     List<Warehouse> getAll();
     boolean existsById(String warehouseId);
 
-    void startPicking(WarehouseStartFlowCommand command);
-    void startPacking(WarehouseStartFlowCommand command);
+    void completePicking(WarehouseStartFlowCommand command);
+    void completePacking(WarehouseStartFlowCommand command);
 }

@@ -4,13 +4,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderstateprocesor.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderstateprocesor.domain.model.Order;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
+import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderstateprocesor.domain.ports.ShippingClient;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.WarehouseOrderActionEvent;
 
 import reactor.core.publisher.Mono;
@@ -25,20 +29,26 @@ public class OrderPackedHandler implements OrderEventHandler {
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
     private final OrderStateHistoryRepository historyRepo;
+    private final InventoryClient inventoryClient;
+    private final ShippingClient shippingClient;
 
     public OrderPackedHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo
+        OrderStateHistoryRepository historyRepo,
+        InventoryClient inventoryClient,
+        ShippingClient shippingClient
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
         this.historyRepo = historyRepo;
+        this.inventoryClient = inventoryClient;
+        this.shippingClient = shippingClient;
     }
 
     @Override
     public String eventType() {
-        return "PackingStarted";
+        return "PackingCompleted";
     }
 
     @Override
@@ -72,9 +82,25 @@ public class OrderPackedHandler implements OrderEventHandler {
 
         Order next = order.withStatus(Status.PACKED);
 
-        return orderRepo.save(next)
-            .then(historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED)))
-            .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId));
+        String reservationId = "resv:" + order.getOrderId();
+
+        List<ShippingClient.ShipmentItemDto> shipmentItems = order.getItems().stream()
+            .map(i -> new ShippingClient.ShipmentItemDto(i.getSku(), i.getQuantity()))
+            .toList();
+
+        return orderRepo.saveIfStatusIs(next, Status.PICKED)
+            .flatMap(saved -> {
+                if (!saved) {
+                    log.info("Order {} already advanced past PICKED (race condition detected), skipping", order.getOrderId());
+                    return Mono.empty();
+                }
+                return historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED))
+                    .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId))
+                    .then(inventoryClient.consumeReservation(reservationId)
+                        .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}", reservationId, order.getOrderId(), result))
+                        .then())
+                    .then(shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems));
+            });
     }
 
     private WarehouseOrderActionEvent parse(String json) {
