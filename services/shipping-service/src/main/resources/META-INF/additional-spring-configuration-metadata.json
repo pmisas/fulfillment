@@ -1,0 +1,34 @@
+{
+  "properties": [
+    {
+      "name": "aws.region",
+      "type": "java.lang.String",
+      "description": "AWS region for DynamoDB, S3 and other AWS services."
+    },
+    {
+      "name": "aws.dynamodb.shipments-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for shipments."
+    },
+    {
+      "name": "aws.dynamodb.outbox-table",
+      "type": "java.lang.String",
+      "description": "DynamoDB table name for outbox events."
+    },
+    {
+      "name": "aws.dynamodb.endpoint",
+      "type": "java.lang.String",
+      "description": "Optional DynamoDB endpoint URL for local development."
+    },
+    {
+      "name": "aws.s3.shipping-guides-bucket",
+      "type": "java.lang.String",
+      "description": "S3 bucket name for shipping guides."
+    },
+    {
+      "name": "aws.s3.endpoint",
+      "type": "java.lang.String",
+      "description": "Optional S3 endpoint URL for local development."
+    }
+  ]
+}
