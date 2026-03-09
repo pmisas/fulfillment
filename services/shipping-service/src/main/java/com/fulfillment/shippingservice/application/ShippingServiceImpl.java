@@ -53,11 +53,19 @@ public class ShippingServiceImpl implements ShippingService {
     public Shipment create(CreateShipmentCommand command) {
         List<Shipment> existing = shipmentRepository.findByOrderId(command.orderId());
         if (!existing.isEmpty()) {
-            log.info("Shipment already exists for orderId={}, returning existing (idempotent)", command.orderId());
-            return existing.get(0);
+            Shipment existingShipment = existing.get(0);
+            if (existingShipment.getShippingGuideS3Key() != null) {
+                log.info("Shipment already exists for orderId={}, returning existing (idempotent)", command.orderId());
+                return existingShipment;
+            }
+            log.info("Shipment exists for orderId={} but guide not uploaded, regenerating", command.orderId());
+            byte[] pdfBytes = pdfGenerator.generate(existingShipment);
+            String s3Key = shippingGuideStorage.upload(existingShipment.getShipmentId(), pdfBytes);
+            return shipmentRepository.save(existingShipment.withShippingGuideS3Key(s3Key));
         }
 
         String shipmentId = UUID.randomUUID().toString();
+        String trackingId = "SHIP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
 
         List<ShipmentItem> items = command.items().stream()
                 .map(item -> ShipmentItem.createShipmentItem(item.sku(), item.quantity()))
@@ -69,9 +77,18 @@ public class ShippingServiceImpl implements ShippingService {
                 command.warehouseId(),
                 command.carrier(),
                 items,
-                command.estimatedDeliveryAt());
+                command.estimatedDeliveryAt())
+                .withTrackingId(trackingId);
 
-        return shipmentRepository.save(shipment);
+        Shipment saved = shipmentRepository.save(shipment);
+
+        byte[] pdfBytes = pdfGenerator.generate(saved);
+        String s3Key = shippingGuideStorage.upload(saved.getShipmentId(), pdfBytes);
+        Shipment withGuide = shipmentRepository.save(saved.withShippingGuideS3Key(s3Key));
+
+        log.info("Shipment created with guide for orderId={} shipmentId={} trackingId={}",
+                command.orderId(), shipmentId, trackingId);
+        return withGuide;
     }
 
     @Override
@@ -103,23 +120,16 @@ public class ShippingServiceImpl implements ShippingService {
             return current;
         }
 
-        String trackingId = "SHIP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
-
-        Shipment candidate = current
-                .withTrackingId(trackingId)
-                .withStatus(ShipmentStatus.SHIPPED);
+        Shipment candidate = current.withStatus(ShipmentStatus.SHIPPED);
 
         Shipment saved = shipmentRepository
                 .saveIfStatusMatches(candidate, current.getStatus())
                 .orElseThrow(() -> new InvalidStatusTransitionException(current.getStatus(), ShipmentStatus.SHIPPED));
 
-        byte[] pdfBytes = pdfGenerator.generate(saved);
-        String s3Key = shippingGuideStorage.upload(saved.getShipmentId(), pdfBytes);
-        Shipment withGuide = shipmentRepository.save(saved.withShippingGuideS3Key(s3Key));
+        log.info("Shipment {} -> SHIPPED (orderId={})", normalizedShipmentId, saved.getOrderId());
+        queueShipmentShippedOutbox(saved);
 
-        queueShipmentShippedOutbox(withGuide);
-
-        return withGuide;
+        return saved;
     }
 
     @Override
