@@ -45,10 +45,10 @@ public class PdfBoxShippingGuidePdfGenerator implements ShippingGuidePdfGenerato
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
                 float y = pageHeight - MARGIN;
 
-                // Header block
                 cs.setNonStrokingColor(new Color(40, 40, 40));
                 cs.addRect(MARGIN, y - 32, contentWidth, 38);
                 cs.fill();
+
                 cs.setNonStrokingColor(Color.WHITE);
                 writeText(cs, bold, 16, MARGIN + 10, y - 22, "FULFILLMENT CO.  -  GUIA DE ENVIO");
                 y -= 45;
@@ -56,33 +56,36 @@ public class PdfBoxShippingGuidePdfGenerator implements ShippingGuidePdfGenerato
                 separator(cs, pageWidth, y);
                 y -= 15;
 
+                // Sub-header for preliminary guide
                 cs.setNonStrokingColor(Color.BLACK);
-                writeText(cs, bold, 14, MARGIN, y, "TRACKING:  " + safe(shipment.getTrackingId()));
+                writeText(cs, bold, 14, MARGIN, y, "GUIA PRELIMINAR - PENDIENTE DE DESPACHO");
                 y -= 10;
+
                 separator(cs, pageWidth, y);
                 y -= 20;
 
+                // Shipment fields
                 cs.setNonStrokingColor(Color.BLACK);
                 y = field(cs, bold, regular, "Shipment ID:", shipment.getShipmentId(), y);
                 y = field(cs, bold, regular, "Order ID:", shipment.getOrderId(), y);
                 y = field(cs, bold, regular, "Warehouse:", shipment.getWarehouseId(), y);
                 y = field(cs, bold, regular, "Carrier:", shipment.getCarrier().name(), y);
-                if (shipment.getShippedAt() != null) {
-                    y = field(cs, bold, regular, "Enviado:", FMT.format(shipment.getShippedAt()), y);
-                }
+                y = field(cs, bold, regular, "Estado Shipment:", shipment.getStatus().name(), y);
+                y = field(cs, bold, regular, "Creado:", FMT.format(shipment.getCreatedAt()), y);
                 y = field(cs, bold, regular, "Est. Entrega:", FMT.format(shipment.getEstimatedDeliveryAt()), y);
 
                 y -= 8;
                 separator(cs, pageWidth, y);
-                y -= 15;
+                y -= 18;
 
                 // Items section
                 writeText(cs, bold, 11, MARGIN, y, "ARTICULOS");
-                y -= 6;
+                y -= 18;
 
                 cs.setNonStrokingColor(new Color(220, 220, 220));
                 cs.addRect(MARGIN, y - 4, contentWidth, 16);
                 cs.fill();
+
                 cs.setNonStrokingColor(Color.BLACK);
                 writeText(cs, bold, 9, MARGIN + 5, y, "SKU");
                 writeText(cs, bold, 9, MARGIN + 250, y, "CANTIDAD");

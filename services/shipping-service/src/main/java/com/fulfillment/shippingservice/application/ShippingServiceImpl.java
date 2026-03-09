@@ -65,7 +65,6 @@ public class ShippingServiceImpl implements ShippingService {
         }
 
         String shipmentId = UUID.randomUUID().toString();
-        String trackingId = "SHIP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
 
         List<ShipmentItem> items = command.items().stream()
                 .map(item -> ShipmentItem.createShipmentItem(item.sku(), item.quantity()))
@@ -77,8 +76,7 @@ public class ShippingServiceImpl implements ShippingService {
                 command.warehouseId(),
                 command.carrier(),
                 items,
-                command.estimatedDeliveryAt())
-                .withTrackingId(trackingId);
+                command.estimatedDeliveryAt());
 
         Shipment saved = shipmentRepository.save(shipment);
 
@@ -86,8 +84,8 @@ public class ShippingServiceImpl implements ShippingService {
         String s3Key = shippingGuideStorage.upload(saved.getShipmentId(), pdfBytes);
         Shipment withGuide = shipmentRepository.save(saved.withShippingGuideS3Key(s3Key));
 
-        log.info("Shipment created with guide for orderId={} shipmentId={} trackingId={}",
-                command.orderId(), shipmentId, trackingId);
+        log.info("Shipment created with guide for orderId={} shipmentId={}",
+                command.orderId(), shipmentId);
         return withGuide;
     }
 
