@@ -16,8 +16,13 @@ import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse.Fie
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleOrderNotFound(
@@ -70,10 +75,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(
             Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ApiErrorResponse body = new ApiErrorResponse(
-                status.value(), "INTERNAL_ERROR", "Ha ocurrido un error inesperado.",
-                 null);
+                status.value(), "INTERNAL_ERROR", ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 }

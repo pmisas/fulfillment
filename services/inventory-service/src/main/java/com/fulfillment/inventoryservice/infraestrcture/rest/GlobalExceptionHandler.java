@@ -16,8 +16,13 @@ import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(InsufficientAvailableStockException.class)
     public ResponseEntity<ApiErrorResponse> handleInsufficientAvailableStock(
@@ -70,6 +75,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(
             Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ApiErrorResponse body = new ApiErrorResponse(
                 status.value(), "INTERNAL_ERROR", ex.getMessage(), null);
