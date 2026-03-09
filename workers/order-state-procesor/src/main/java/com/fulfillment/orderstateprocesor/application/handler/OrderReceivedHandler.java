@@ -111,10 +111,6 @@ public class OrderReceivedHandler implements OrderEventHandler {
                         }
                         log.info("Reserve INSUFFICIENT_STOCK on warehouse={}, trying next", warehouseId);
                         return Mono.<String>empty();
-                    })
-                    .onErrorResume(ex -> {
-                        log.warn("Reserve failed on warehouse={}: {}, trying next", warehouseId, ex.getMessage());
-                        return Mono.empty();
                     });
             })
             .next();

@@ -88,18 +88,17 @@ public class OrderPackedHandler implements OrderEventHandler {
             .map(i -> new ShippingClient.ShipmentItemDto(i.getSku(), i.getQuantity()))
             .toList();
 
-        return orderRepo.saveIfStatusIs(next, Status.PICKED)
+        return inventoryClient.consumeReservation(reservationId)
+            .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}", reservationId, order.getOrderId(), result))
+            .then(shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems))
+            .then(orderRepo.saveIfStatusIs(next, Status.PICKED))
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} already advanced past PICKED (race condition detected), skipping", order.getOrderId());
-                    return Mono.empty();
+                    return Mono.<Void>empty();
                 }
                 return historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED))
-                    .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId))
-                    .then(inventoryClient.consumeReservation(reservationId)
-                        .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}", reservationId, order.getOrderId(), result))
-                        .then())
-                    .then(shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems));
+                    .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId));
             });
     }
 
