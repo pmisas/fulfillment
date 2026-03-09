@@ -162,9 +162,6 @@ public class OrderServiceImpl implements OrderService {
             log.info("Order already rejected, treating as canceled: orderId={}", orderId);
             return;
         }
-    
-        // DO NOT change status here - let the worker do it after releasing inventory
-        // This prevents race condition and ensures inventory is always released
         
         String eventType = "OrderCancelled";
         String eventId = "OrderCancelled:" + orderId + ":" + eventType;

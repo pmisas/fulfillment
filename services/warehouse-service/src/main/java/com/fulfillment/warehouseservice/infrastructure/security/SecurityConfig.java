@@ -26,8 +26,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/warehouses").hasRole("ADMIN")
 
                 .requestMatchers(HttpMethod.POST,
-                    "/api/v1/warehouses/*/orders/*/picking/start",
-                    "/api/v1/warehouses/*/orders/*/packing/start"
+                    "/api/v1/warehouses/*/orders/*/picking/complete",
+                    "/api/v1/warehouses/*/orders/*/packing/complete"
                 ).hasAnyRole("WAREHOUSE_MANAGER", "ADMIN")
 
                 .requestMatchers(HttpMethod.GET, "/api/v1/warehouses/**")
