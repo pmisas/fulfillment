@@ -425,19 +425,19 @@ GET /api/v1/shipments/{shipmentId}/guide
 
 ## Idempotencia y concurrencia
 
-#### Idempotencia de creación de órdenes
+### Idempotencia de creación de órdenes
 
 order-service usa Idempotency-Key y Redis para evitar órdenes duplicadas ante reintentos del cliente.
 
-#### Idempotencia de eventos
+### Idempotencia de eventos
 
 Los eventos tienen eventId, y los servicios intentan evitar duplicados en outbox.
 
-#### Actualizaciones condicionales
+### Actualizaciones condicionales
 
 En varios puntos se usan guardas por estado esperado para evitar transiciones inválidas o carreras concurrentes.
 
-#### Consistencia eventual
+### Consistencia eventual
 
 Dado que la arquitectura usa eventos asíncronos, el sistema no busca consistencia fuerte global, sino coordinación eventual entre servicios desacoplados.
 
@@ -445,11 +445,11 @@ Dado que la arquitectura usa eventos asíncronos, el sistema no busca consistenc
 
 ## Mejoras futuras
 
-Añadir trazabilidad distribuida.
-Mejorar modelado Dynamo con GSIs donde actualmente hay scans.
-Fortalecer reclamación atómica en outbox antes de publicar eventos.
-Endurecer idempotencia completa en consumidores y productores.
-Mejorar pruebas de carga y resiliencia.
-Añadir métricas y dashboards.
-Refinar contratos internos entre servicios.
-Agregar documentación OpenAPI/Swagger.
+- Añadir trazabilidad distribuida.
+- Mejorar modelado Dynamo con GSIs donde actualmente hay scans.
+- Fortalecer reclamación atómica en outbox antes de publicar eventos.
+- Endurecer idempotencia completa en consumidores y productores.
+- Mejorar pruebas de carga y resiliencia.
+- Añadir métricas y dashboards.
+- Refinar contratos internos entre servicios.
+- Agregar documentación OpenAPI/Swagger.
