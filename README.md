@@ -75,14 +75,14 @@ El sistema está compuesto por los siguientes servicios:
 
 Responsable de la creación y consulta de órdenes.
 
-Responsabilidades principales:
+**Responsabilidades principales:**
 - Crear órdenes nuevas.
 - Aplicar idempotencia por encabezado Idempotency-Key.
 - Registrar estado inicial RECEIVED.
 - Persistir un evento OrderReceived en outbox.
 - Aceptar solicitudes de cancelación publicando OrderCancelled.
 
-Endpoints principales:
+**Endpoints principales:**
 POST /api/v1/orders
 GET /api/v1/orders/{id}
 POST /api/v1/orders/{id}/cancel
@@ -91,13 +91,13 @@ POST /api/v1/orders/{id}/cancel
 
 Responsable de administrar las bodegas y emitir eventos operativos asociados a la preparación de órdenes.
 
-Responsabilidades principales:
+**Responsabilidades principales:**
 - Crear bodegas.
 - Consultar una bodega o listar todas.
 - Verificar existencia de bodega vía endpoint interno.
 - Publicar eventos PickingCompleted y PackingCompleted.
 
-Endpoints principales:
+**Endpoints principales:**
 POST /api/v1/warehouses
 GET /api/v1/warehouses
 GET /api/v1/warehouses/{id}
@@ -110,7 +110,7 @@ GET /internal/v1/warehouses
 
 Responsable del inventario por bodega y SKU.
 
-Responsabilidades principales:
+**Responsabilidades principales:**
 - Reabastecer inventario por lote.
 - Consultar inventario por bodega.
 - Consultar disponibilidad para una lista de SKUs.
@@ -118,7 +118,7 @@ Responsabilidades principales:
 - Consumir una reserva cuando el proceso avanza.
 - Liberar una reserva cuando una orden se cancela.
 
-Endpoints principales:
+**Endpoints principales:**
 
 Públicos
 POST /api/v1/warehouses/{warehouseId}/inventory/restock
@@ -134,7 +134,7 @@ POST /internal/v1/reservations/{reservationId}/consume
 
 Responsable de la creación del envío y administración de su ciclo de vida.
 
-Responsabilidades principales:
+**Responsabilidades principales:**
 - Crear un shipment para una orden ya empacada.
 - Generar una guía PDF de envío.
 - Subir la guía a S3.
@@ -142,7 +142,7 @@ Responsabilidades principales:
 - Marcar shipments como SHIPPED o DELIVERED.
 - Publicar evento ShipmentShipped.
 
-Endpoints principales:
+**Endpoints principales:**
 
 Internos
 POST /internal/v1/shipments
@@ -158,14 +158,14 @@ GET /api/v1/shipments/{id}/guide
 
 Es el componente que procesa eventos desde SQS y actualiza el estado global de la orden.
 
-Responsabilidades principales:
+**Responsabilidades principales:**
 - Consumir mensajes desde SQS.
 - Determinar el tipo de evento.
 - Delegar a un handler especializado.
 - Actualizar orden e historial.
 - Orquestar llamadas internas a inventory, warehouse y shipping.
 
-Eventos procesados:
+**Eventos procesados:**
 - OrderReceived
 - OrderCancelled
 - PickingCompleted
@@ -176,7 +176,7 @@ Eventos procesados:
 
 Componente serverless encargado de desacoplar persistencia de negocio y publicación de eventos.
 
-Responsabilidades principales:
+**Responsabilidades principales:**
 - Consultar eventos en estado PENDING desde la tabla outbox.
 - Publicar esos eventos en SQS.
 - Marcar como SENT los eventos exitosos.
@@ -186,52 +186,52 @@ Responsabilidades principales:
 
 ## Flujo funcional end-to-end
 
-**1. Creación de orden**
+### 1. Creación de orden
 
 El cliente crea una orden mediante order-service.
 
-**2. Persistencia inicial**
+### 2. Persistencia inicial
 
 Se guarda:
 la orden en estado RECEIVED,
 su historial inicial,
 un evento outbox OrderReceived.
 
-**3. Publicación del evento**
+### 3. Publicación del evento
 
 La Lambda de outbox detecta el evento pendiente y lo publica en SQS.
 
-**4. Procesamiento de validación**
+### 4. Procesamiento de validación
 
 order-state-processor consume OrderReceived, consulta bodegas, revisa disponibilidad y reserva inventario en la mejor bodega posible.
 
-**5. Cambio a VALIDATED o REJECTED**
+### 5. Cambio a VALIDATED o REJECTED
 
 Si hay stock y reserva exitosa, la orden pasa a VALIDATED.
 Si ninguna bodega puede cumplir, pasa a REJECTED.
 
-**6. Operación de bodega**
+### 6. Operación de bodega
 
 Desde warehouse-service se notifican los hitos:
   PickingCompleted
   PackingCompleted
 
-**7. Consumo de reserva y creación de shipment**
+### 7. Consumo de reserva y creación de shipment
 
 Al recibir PackingCompleted, el processor:
   consume la reserva,
   solicita creación de shipment a shipping-service,
   mueve la orden a PACKED.
 
-**8. Despacho**
+### 8. Despacho
 
 Cuando el shipment se marca como SHIPPED, shipping-service publica ShipmentShipped.
 
-**9. Cierre del ciclo**
+### 9. Cierre del ciclo
 
 El processor consume el evento y la orden pasa a SHIPPED.
 
-**10. Cancelación**
+### 10. Cancelación
 
 En cualquier punto cancelable, order-service puede publicar OrderCancelled, provocando liberación de reserva y transición a CANCELED.
 
