@@ -1,72 +1,86 @@
 # order-service
 
-Microservicio encargado de recibir y consultar órdenes para la plataforma de fulfillment.
+Microservicio encargado de la **creación, consulta y cancelación de órdenes** dentro de la plataforma de fulfillment.
 
----
+## Responsabilidad
 
-## Requisitos
+Este servicio maneja el ciclo inicial de la orden:
 
-Java 17
-Maven (o usar el wrapper mvnw incluido)
+- crea nuevas órdenes,
+- consulta órdenes por id,
+- recibe solicitudes de cancelación,
+- registra el estado inicial de la orden,
+- publica eventos de dominio para que otros componentes continúen el flujo.
 
----
+## Funcionalidades principales
 
-## Cómo correrlo (local)
+- Creación de órdenes con `Idempotency-Key`
+- Consulta de órdenes
+- Cancelación de órdenes
+- Persistencia de historial de estado
+- Publicación de eventos mediante **Outbox Pattern**
 
-Desde la raíz del repositorio:
+## Estados manejados
 
-### Windows (Git Bash / PowerShell)
+La orden se crea inicialmente en:
 
-```bash
+- `RECEIVED`
 
-cd services/order-service
-mvnw.cmd spring-boot:run
-Linux / Mac
-cd services/order-service
-./mvnw spring-boot:run
+Y desde este servicio también se puede solicitar cancelación, generando el evento correspondiente para procesamiento asíncrono.
+
+## Eventos publicados
+
+- `OrderReceived`
+- `OrderCancelled`
+
+## Endpoints principales
+
+### Crear orden
+```http
+POST /api/v1/orders
+```
+Headers:
+```http
+Idempotency-Key: <unique-key>
 ```
 
+Body:
+```json
+{
+  "lat": 4.7110,
+  "lng": -74.0721,
+  "items": [
+    { "sku": "SKU-1", "quantity": 2 },
+    { "sku": "SKU-2", "quantity": 1 }
+  ]
+}
+```
 
-El servicio quedará disponible en:
-http://localhost:8080
+### Consultar orden
+```http
+GET /api/v1/orders/{orderId}
+```
 
-> Nota: más adelante se cambiará el puerto para correr varios servicios a la vez (ej. 8081).
+## Componentes técnicos principales
 
+- Spring Boot
+- DynamoDB para persistencia de órdenes, historial y outbox
+- Redis para idempotencia
+- Spring Security + JWT/Cognito
+- Outbox Pattern para publicación confiable de eventos
 
-## Endpoints (planeados)
+## Persistencia
 
-### Orders
+Este servicio trabaja con:
+- tabla de órdenes
+- tabla de historial de estados
+- tabla outbox
+- Redis para control de idempotencia
 
-#### POST /orders
-Crea una orden. Debe validar:
+## Seguridad
 
-- `warehouse_id` obligatorio
-- `customer_id` obligatorio
-- `items` no vacío
-- `quantity > 0`
+Los endpoints /api/v1/orders/** requieren autenticación y roles autorizados.
 
-Idempotencia por header:
-`Idempotency-Key`
-
-#### GET /orders/{id}
-Retorna una orden por id.
-
-## Persistencia 
-
-### DynamoDB
-
-- Tabla: `Orders`
-- Primary Key: `order_id`
-
-### Redis (más adelante)
-
-- Idempotencia (`Idempotency-Key`)
-- Rate limiting
-
-## Estado del proyecto
-
- - [x] Esqueleto Spring Boot creado
- - [x] Endpoints implementados
- - [ ] DynamoDB integración
- - [ ] Redis idempotencia
- - [ ] Deploy en ECS Fargate
+Roles observados en este servicio:
+- OPERATOR
+- ADMIN
