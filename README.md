@@ -71,7 +71,7 @@ El sistema está compuesto por los siguientes servicios:
 
 ## Microservicios
 
-1. order-service
+### 1. order-service
 
 Responsable de la creación y consulta de órdenes.
 
@@ -87,7 +87,7 @@ POST /api/v1/orders
 GET /api/v1/orders/{id}
 POST /api/v1/orders/{id}/cancel
 
-2. warehouse-service
+### 2. warehouse-service
 
 Responsable de administrar las bodegas y emitir eventos operativos asociados a la preparación de órdenes.
 
@@ -106,7 +106,7 @@ POST /api/v1/warehouses/{warehouseId}/orders/{orderId}/packing/complete
 HEAD /internal/v1/warehouses/{id}
 GET /internal/v1/warehouses
 
-3. inventory-service
+### 3. inventory-service
 
 Responsable del inventario por bodega y SKU.
 
@@ -130,7 +130,7 @@ POST /internal/v1/warehouses/{warehouseId}/reservations
 DELETE /internal/v1/reservations/{reservationId}
 POST /internal/v1/reservations/{reservationId}/consume
 
-4. shipping-service
+### 4. shipping-service
 
 Responsable de la creación del envío y administración de su ciclo de vida.
 
@@ -154,7 +154,7 @@ POST /api/v1/shipments/{id}/ship
 POST /api/v1/shipments/{id}/deliver
 GET /api/v1/shipments/{id}/guide
 
-5. order-state-processor
+### 5. order-state-processor
 
 Es el componente que procesa eventos desde SQS y actualiza el estado global de la orden.
 
@@ -172,7 +172,7 @@ Eventos procesados:
 - PackingCompleted
 - ShipmentShipped
 
-6. outbox-publisher-lambda
+### 6. outbox-publisher-lambda
 
 Componente serverless encargado de desacoplar persistencia de negocio y publicación de eventos.
 
@@ -186,52 +186,52 @@ Responsabilidades principales:
 
 ## Flujo funcional end-to-end
 
-1. Creación de orden
+**1. Creación de orden**
 
 El cliente crea una orden mediante order-service.
 
-2. Persistencia inicial
+**2. Persistencia inicial**
 
 Se guarda:
 la orden en estado RECEIVED,
 su historial inicial,
 un evento outbox OrderReceived.
 
-3. Publicación del evento
+**3. Publicación del evento**
 
 La Lambda de outbox detecta el evento pendiente y lo publica en SQS.
 
-4. Procesamiento de validación
+**4. Procesamiento de validación**
 
 order-state-processor consume OrderReceived, consulta bodegas, revisa disponibilidad y reserva inventario en la mejor bodega posible.
 
-5. Cambio a VALIDATED o REJECTED
+**5. Cambio a VALIDATED o REJECTED**
 
 Si hay stock y reserva exitosa, la orden pasa a VALIDATED.
 Si ninguna bodega puede cumplir, pasa a REJECTED.
 
-6. Operación de bodega
+**6. Operación de bodega**
 
 Desde warehouse-service se notifican los hitos:
   PickingCompleted
   PackingCompleted
 
-7. Consumo de reserva y creación de shipment
+**7. Consumo de reserva y creación de shipment**
 
 Al recibir PackingCompleted, el processor:
   consume la reserva,
   solicita creación de shipment a shipping-service,
   mueve la orden a PACKED.
 
-8. Despacho
+**8. Despacho**
 
 Cuando el shipment se marca como SHIPPED, shipping-service publica ShipmentShipped.
 
-9. Cierre del ciclo
+**9. Cierre del ciclo**
 
 El processor consume el evento y la orden pasa a SHIPPED.
 
-10. Cancelación
+**10. Cancelación**
 
 En cualquier punto cancelable, order-service puede publicar OrderCancelled, provocando liberación de reserva y transición a CANCELED.
 
@@ -239,10 +239,10 @@ En cualquier punto cancelable, order-service puede publicar OrderCancelled, prov
 
 ## Modelo de estados de la orden
 
-    RECEIVED  ->  VALIDATED -> PICKED -> PACKED -> SHIPPED
-        |              |          |
-        v              v          v
-REJECTED/CANCELED   CANCELED   CANCELED
+    RECEIVED    ->    VALIDATED -> PICKED -> PACKED -> SHIPPED
+        |                |          |
+        v                v          v
+  REJECTED/CANCELED   CANCELED   CANCELED
 
 ## Estados
 
@@ -256,7 +256,7 @@ REJECTED/CANCELED   CANCELED   CANCELED
 
 ---
 
-Patrones de arquitectura usados:
+## Patrones de arquitectura usados
 
 ### Arquitectura Hexagonal
 
@@ -286,20 +286,20 @@ El estado global del sistema se sincroniza de forma eventual entre servicios des
 
 Tecnologías utilizadas:
 
-Java 17+
-Spring Boot
-Spring Web / WebFlux
-Spring Security
-JWT / OAuth2 Resource Server
-Amazon Cognito
-Amazon DynamoDB
-Amazon SQS
-AWS Lambda
-Amazon S3
-Redis
-Apache PDFBox
-AWS SDK v2
-Project Reactor
+- Java 17+
+- Spring Boot
+- Spring Web / WebFlux
+- Spring Security
+- JWT / OAuth2 Resource Server
+- Amazon Cognito
+- Amazon DynamoDB
+- Amazon SQS
+- AWS Lambda
+- Amazon S3
+- Redis
+- Apache PDFBox
+- AWS SDK v2
+- Project Reactor
 
 ---
 
@@ -308,21 +308,21 @@ Project Reactor
 La seguridad se implementa con JWT Bearer Tokens y autorización por roles derivados de grupos de Amazon Cognito.
 
 Roles en el proyecto:
-ADMIN
-OPERATOR
-WAREHOUSE_MANAGER
+- ADMIN
+- OPERATOR
+- WAREHOUSE_MANAGER
 
 Ejemplos de restricciones:
-creación de bodegas: solo ADMIN
-consulta de órdenes: OPERATOR y ADMIN
-operaciones de inventario: WAREHOUSE_MANAGER y ADMIN
-endpoints internos: usados para comunicación entre servicios
+- creación de bodegas: solo ADMIN
+- consulta de órdenes: OPERATOR y ADMIN
+- operaciones de inventario: WAREHOUSE_MANAGER y ADMIN
+- endpoints internos: usados para comunicación entre servicios
 
 ---
 
 ## Persistencia y mensajería
 
-**DynamoDB**
+### **DynamoDB**
 Tablas utilizadas según el servicio:
 - Orders
 - OrderStateHistory
@@ -332,13 +332,13 @@ Tablas utilizadas según el servicio:
 - Shipments
 - OutboxEvents
 
-**Redis**
+### **Redis**
 Usado en order-service para idempotencia de creación de órdenes.
 
-**SQS**
+### **SQS**
 Usado como canal central de eventos entre productores y order-state-processor.
 
-**S3**
+### **S3**
 Usado por shipping-service para almacenar guías PDF.
 
 ---
