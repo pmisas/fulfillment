@@ -1,65 +1,97 @@
-# order-service
+# warehouse-service
 
-Microservicio encargado de los centros logísticos (warehouses) para plataforma de fulfillment.
+Microservicio encargado de la **gestión de bodegas** y de la publicación de eventos operativos del flujo logístico.
 
----
+## Responsabilidad
 
-## Requisitos
+Este servicio administra la información de las bodegas y expone operaciones relacionadas con el proceso interno de preparación de órdenes.
 
-Java 17
-Maven (o usar el wrapper mvnw incluido)
+Sus funciones principales son:
 
----
+- crear bodegas,
+- consultar bodegas,
+- validar si una bodega existe,
+- publicar eventos cuando una orden completa picking o packing.
 
-## Cómo correrlo (local)
+## Funcionalidades principales
 
-Desde la raíz del repositorio:
+- Registro de nuevas bodegas
+- Consulta de bodegas por id
+- Listado de bodegas
+- Endpoint interno de validación de existencia
+- Publicación de eventos operativos mediante **Outbox Pattern**
 
-### Windows (Git Bash / PowerShell)
+## Eventos publicados
 
-```bash
+- `PickingCompleted`
+- `PackingCompleted`
 
-cd services/warehouse-service
-mvnw.cmd spring-boot:run
-Linux / Mac
-cd services/warehouse-service
-./mvnw spring-boot:run
+## Endpoints principales
+
+### Crear bodega
+```http
+POST /api/v1/warehouses
 ```
 
+Body:
+```json
+{
+  "city": "Bogota",
+  "lat": 4.7110,
+  "lng": -74.0721
+}
+```
 
-El servicio quedará disponible en:
-http://localhost:8080
+### Consultar bodega por id
+```http
+Consultar bodega por id
+```
 
-> Nota: más adelante se cambiará el puerto para correr varios servicios a la vez.
+### Listar bodegas
+```http
+GET /api/v1/warehouses
+```
 
+### Marcar picking completado
+```http
+POST /api/v1/warehouses/{warehouseId}/orders/{orderId}/picking/complete
+```
 
-## Endpoints (planeados)
+### Marcar packing completado
+```http
+POST /api/v1/warehouses/{warehouseId}/orders/{orderId}/packing/complete
+```
 
-### Warehouses
+### Validar existencia de bodega
+```http
+HEAD /internal/v1/warehouses/{warehouseId}
+```
 
-#### POST /warehouses
-Crea un warehouse Debe validar:
+### Listado interno de bodegas
+```http
+GET /internal/v1/warehouses
+```
 
-- `location` obligatorio
-- no permitir duplicados
+## Componentes técnicos principales
 
+- Spring Boot
+- DynamoDB para persistencia de bodegas y outbox
+- Spring Security + JWT/Cognito
+- Outbox Pattern para eventos operativos
 
-#### GET /warehouses
-Retorna la lista de warehouses registrados.
+## Persistencia
 
-#### GET /warehouses/{id}
-Retorna un warehouses por id
+Este servicio trabaja con:
+- tabla de bodegas
+- tabla outbox
 
-## Persistencia 
+## Seguridad
 
-### DynamoDB
+Los endpoints públicos requieren autenticación y autorización según rol.
 
-- Tabla: `warehouses`
-- Primary Key: `warehouse_id`
+Roles en este servicio:
+- ADMIN
+- WAREHOUSE_MANAGER
+- OPERATOR
 
-## Estado del proyecto
-
- - [x] Esqueleto Spring Boot creado
- - [ ] Endpoints implementados
- - [ ] DynamoDB integración
- - [ ] Deploy en ECS Fargate
+Los endpoints internos se usan para comunicación entre microservicios.
