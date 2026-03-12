@@ -2,12 +2,23 @@ package com.fulfillment.shippingservice.infrastructure.rest.dto;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Respuesta de error de la API")
 public record ApiErrorResponse(
+        @Schema(description = "Código de estado HTTP", example = "404")
         int status,
+        @Schema(description = "Código de error de la aplicación", example = "SHIPMENT_NOT_FOUND")
         String error,
+        @Schema(description = "Mensaje descriptivo del error", example = "Shipment not found")
         String message,
+        @Schema(description = "Violaciones de validación por campo")
         List<FieldViolation> fields) {
 
-    public record FieldViolation(String field, String message) {
+    public record FieldViolation(
+        @Schema(description = "Nombre del campo", example = "orderId")
+        String field,
+        @Schema(description = "Mensaje de la violación", example = "must not be blank")
+        String message) {
     }
 }
