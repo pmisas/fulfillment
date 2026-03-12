@@ -17,10 +17,12 @@ import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.InternalCreateShipmentRequest;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.ShipmentResponse;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/internal/v1/shipments")
+@Tag(name = "Internal - Shipping", description = "Endpoints internos para comunicación entre servicios")
 public class InternalShippingController {
 
     private final ShippingService shippingService;
