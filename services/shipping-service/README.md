@@ -95,7 +95,7 @@ GET /api/v1/shipments/{shipmentId}/guide
 
 ## Persistencia
 
-Este servicio trabaja principalmente con:
+Este servicio trabaja con:
 
 - tabla de shipments
 - tabla outbox
