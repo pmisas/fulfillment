@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.application.dto.OrderReceivedEventPayload;
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
+import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.model.Order;
@@ -150,7 +151,7 @@ public class OrderServiceImpl implements OrderService {
     
         if (current.getStatus() == Status.SHIPPED) {
             log.warn("Cannot cancel shipped order: orderId={}", orderId);
-            throw new IllegalStateException("Cannot cancel a shipped order");
+            throw new InvalidStatusTransitionException(current.getStatus(), Status.CANCELED);
         }
     
         if (current.getStatus() == Status.CANCELED) {
