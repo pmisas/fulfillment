@@ -6,3 +6,11 @@ aws:
   dynamodb:
     endpoint: "http://localhost:8000"
     warehouses-table: Warehouses
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
