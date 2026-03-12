@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.warehouseservice.application.WarehouseService;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseResponse;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/internal/v1/warehouses")
+@Tag(name = "Internal - Warehouse", description = "Endpoints internos para comunicación entre servicios")
 public class WarehouseInternalController {
 
     private final WarehouseService warehouseService;
