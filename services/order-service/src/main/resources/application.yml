@@ -2,7 +2,7 @@ spring:
   application:
     name: order-service
   profiles:
-    active: cloud
+    active: local
 
 server:
   port: 8080
