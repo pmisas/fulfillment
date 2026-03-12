@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
+import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
@@ -30,6 +31,15 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.NOT_FOUND;
         ApiErrorResponse body = new ApiErrorResponse(
                 status.value(), "ORDER_NOT_FOUND", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(OrderCreationInProgressException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderCreationInProgress(
+            OrderCreationInProgressException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "ORDER_CREATION_IN_PROGRESS", ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 
