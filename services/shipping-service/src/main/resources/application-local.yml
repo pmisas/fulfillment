@@ -10,3 +10,11 @@ aws:
   s3:
     endpoint: "http://localhost:4566"
     shipping-guides-bucket: local-shipping-guides
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha

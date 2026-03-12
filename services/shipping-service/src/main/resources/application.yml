@@ -2,7 +2,7 @@ spring:
   application:
     name: shipping-service
   profiles:
-    active: cloud
+    active: local
 
 server:
   port: 8083
