@@ -98,11 +98,13 @@ public class OrderController {
         description = "Solicita la cancelación asíncrona de una orden. La operación se procesa por eventos."
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "202", description = "Cancelación solicitada",
+        @ApiResponse(responseCode = "202", description = "Cancelación solicitada. La orden será cancelada de forma asíncrona por el worker",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = AsyncOperationResponse.class))),
-        @ApiResponse(responseCode = "400", description = "La orden no puede cancelarse en su estado actual",
+        @ApiResponse(responseCode = "400", description = "Transición de estado inválida: la orden está en estado SHIPPED y no puede cancelarse",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Orden no encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/cancel")
