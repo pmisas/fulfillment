@@ -13,10 +13,13 @@ import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,10 +48,14 @@ public class OrderController {
         description = "Crea una orden nueva usando Idempotency-Key para evitar duplicados."
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "Orden creada correctamente"),
-        @ApiResponse(responseCode = "400", description = "Request inválido"),
-        @ApiResponse(responseCode = "409", description = "Conflicto de idempotencia"),
-        @ApiResponse(responseCode = "500", description = "Error interno")
+        @ApiResponse(responseCode = "201", description = "Orden creada correctamente",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Request con campos inválidos",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "Conflicto de idempotencia: otra creación en progreso con la misma clave, o estado inconsistente",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping()
     @ResponseStatus(HttpStatus.CREATED)
@@ -72,8 +79,10 @@ public class OrderController {
         description = "Devuelve el estado actual de una orden."
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Orden encontrada"),
-        @ApiResponse(responseCode = "404", description = "Orden no encontrada")
+        @ApiResponse(responseCode = "200", description = "Orden encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Orden no encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
@@ -89,9 +98,12 @@ public class OrderController {
         description = "Solicita la cancelación asíncrona de una orden. La operación se procesa por eventos."
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "202", description = "Cancelación solicitada"),
-        @ApiResponse(responseCode = "404", description = "Orden no encontrada"),
-        @ApiResponse(responseCode = "400", description = "La orden no puede cancelarse")
+        @ApiResponse(responseCode = "202", description = "Cancelación solicitada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AsyncOperationResponse.class))),
+        @ApiResponse(responseCode = "400", description = "La orden no puede cancelarse en su estado actual",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Orden no encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{id}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)

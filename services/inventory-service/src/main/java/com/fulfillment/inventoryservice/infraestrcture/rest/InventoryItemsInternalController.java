@@ -24,10 +24,12 @@ import com.fulfillment.inventoryservice.infraestrcture.rest.dto.BatchRequest;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.CheckAvailabilityResponse;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ReserveItemsRequest;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/internal/v1")
+@Tag(name = "Internal - Inventory", description = "Endpoints internos para comunicación entre servicios")
 public class InventoryItemsInternalController {
     
     private static final Logger log = LoggerFactory.getLogger(InventoryItemsInternalController.class);
