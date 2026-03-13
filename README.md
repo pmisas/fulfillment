@@ -238,11 +238,12 @@ En cualquier punto cancelable, order-service puede publicar OrderCancelled, prov
 ---
 
 ## Modelo de estados de la orden
-
+```
     RECEIVED    ->    VALIDATED -> PICKED -> PACKED -> SHIPPED
         |                |          |
         v                v          v
   REJECTED/CANCELED   CANCELED   CANCELED
+```
 
 ## Estados
 
