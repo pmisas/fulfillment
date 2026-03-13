@@ -1,77 +1,50 @@
-/*package com.fulfillment.orderservice.domain.model;
+package com.fulfillment.orderservice.domain.model;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
-public class StatusTest {
-    
-    @Test
-    void canTransitionTo_createdToConfirmed_shouldAllow() {
-        
-        boolean result = Status.CREATED.canTransitionTo(Status.CONFIRMED);
+class StatusTest {
 
-        assertTrue(result);
+    @Test
+    void received_shouldAllowValidatedRejectedAndCanceled() {
+        assertTrue(Status.RECEIVED.canTransitionTo(Status.VALIDATED));
+        assertTrue(Status.RECEIVED.canTransitionTo(Status.REJECTED));
+        assertTrue(Status.RECEIVED.canTransitionTo(Status.CANCELED));
     }
 
     @Test
-    void canTransitionTo_confirmedToPacked_shouldAllow() {
-
-        boolean result = Status.CONFIRMED.canTransitionTo(Status.PACKED);
-
-        assertTrue(result);
+    void received_shouldNotAllowPickedPackedOrShipped() {
+        assertFalse(Status.RECEIVED.canTransitionTo(Status.PICKED));
+        assertFalse(Status.RECEIVED.canTransitionTo(Status.PACKED));
+        assertFalse(Status.RECEIVED.canTransitionTo(Status.SHIPPED));
     }
 
     @Test
-    void canTransitionTo_packedToShipped_shouldAllow() {
-        
-        boolean result = Status.PACKED.canTransitionTo(Status.SHIPPED);
-
-        assertTrue(result);
+    void validated_shouldAllowPickedAndCanceled() {
+        assertTrue(Status.VALIDATED.canTransitionTo(Status.PICKED));
+        assertTrue(Status.VALIDATED.canTransitionTo(Status.CANCELED));
     }
 
     @Test
-    void canTransitionTo_createdToCanceled_shouldAllow() {
-
-        boolean result = Status.CREATED.canTransitionTo(Status.CANCELED);
-
-        assertTrue(result);
+    void picked_shouldAllowPackedAndCanceled() {
+        assertTrue(Status.PICKED.canTransitionTo(Status.PACKED));
+        assertTrue(Status.PICKED.canTransitionTo(Status.CANCELED));
     }
 
     @Test
-    void canTransitionTo_confirmedToCanceled_shouldAllow() {
-
-        boolean result = Status.CONFIRMED.canTransitionTo(Status.CANCELED);
-
-        assertTrue(result);
+    void packed_shouldAllowOnlyShipped() {
+        assertTrue(Status.PACKED.canTransitionTo(Status.SHIPPED));
+        assertFalse(Status.PACKED.canTransitionTo(Status.CANCELED));
+        assertFalse(Status.PACKED.canTransitionTo(Status.REJECTED));
     }
 
     @Test
-    void canTransitionTo_packedToCanceled_shouldNotAllow() {
-
-        boolean result = Status.PACKED.canTransitionTo(Status.CANCELED);
-
-        assertFalse(result);
+    void terminalStates_shouldNotAllowFurtherTransitions() {
+        for (Status status : new Status[]{Status.SHIPPED, Status.REJECTED, Status.CANCELED}) {
+            for (Status target : Status.values()) {
+                assertFalse(status.canTransitionTo(target));
+            }
+        }
     }
-
-    @Test
-    void canTransitionTo_shippedIsTerminalState() {
-
-        assertFalse(Status.SHIPPED.canTransitionTo(Status.CREATED));
-        assertFalse(Status.SHIPPED.canTransitionTo(Status.CONFIRMED));
-        assertFalse(Status.SHIPPED.canTransitionTo(Status.PACKED));
-        assertFalse(Status.SHIPPED.canTransitionTo(Status.CANCELED));
-    }
-
-    @Test
-    void canTransitionTo_canceledIsTerminalState() {
-
-        assertFalse(Status.CANCELED.canTransitionTo(Status.CREATED));
-        assertFalse(Status.CANCELED.canTransitionTo(Status.CONFIRMED));
-        assertFalse(Status.CANCELED.canTransitionTo(Status.PACKED));
-        assertFalse(Status.CANCELED.canTransitionTo(Status.SHIPPED));
-    }
-
 }
-*/

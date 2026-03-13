@@ -1,42 +1,56 @@
 package com.fulfillment.orderservice.domain.model;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-public class OrderItemTest {
-    
+import org.junit.jupiter.api.Test;
+
+class OrderItemTest {
+
     @Test
-    void createOrderItem_whenValid_shouldCreate() {
+    void createOrderItem_shouldCreateItemWhenDataIsValid() {
+        OrderItem item = OrderItem.createOrderItem("SKU-1", 2);
 
-        String sku = "SKU-APPLE-01";
-        int quantity = 2;
-
-        OrderItem item = OrderItem.createOrderItem(sku, quantity);
-
-        assertEquals("SKU-APPLE-01", item.getSku());
+        assertEquals("SKU-1", item.getSku());
         assertEquals(2, item.getQuantity());
     }
 
     @Test
-    void createOrderItem_whenQuantityIsZero_shouldThrowIllegalArgumentException() {
-        String sku = "SKU-APPLE-01";
-        int quantity = 0;
-
-        assertThrows(IllegalArgumentException.class,
-            () ->  OrderItem.createOrderItem(sku, quantity)
+    void createOrderItem_shouldThrowWhenSkuIsNull() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderItem.createOrderItem(null, 2)
         );
-        
+
+        assertEquals("sku must be not blank", ex.getMessage());
     }
 
     @Test
-    void createOrderItem_whenSkuIsBlank_shouldThrowIllegalArgumentException() {
-        String sku = " ";
-        int quantity = 1;
-
-        assertThrows(IllegalArgumentException.class,
-            () ->  OrderItem.createOrderItem(sku, quantity)
+    void createOrderItem_shouldThrowWhenSkuIsBlank() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderItem.createOrderItem("   ", 2)
         );
+
+        assertEquals("sku must be not blank", ex.getMessage());
     }
 
+    @Test
+    void createOrderItem_shouldThrowWhenQuantityIsZero() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderItem.createOrderItem("SKU-1", 0)
+        );
+
+        assertEquals("quantity must be > 0", ex.getMessage());
+    }
+
+    @Test
+    void createOrderItem_shouldThrowWhenQuantityIsNegative() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderItem.createOrderItem("SKU-1", -1)
+        );
+
+        assertEquals("quantity must be > 0", ex.getMessage());
+    }
 }

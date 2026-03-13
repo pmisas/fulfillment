@@ -6,6 +6,8 @@ import java.util.Objects;
 
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 
+import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
+
 import lombok.Getter;
 
 @Getter
@@ -30,7 +32,7 @@ public class Order {
             double lat,
             double lng,
             List<OrderItem> items) {
-        this.orderId = orderId;
+        this.orderId = requireNonBlank(orderId, "orderId");
         this.warehouseId = warehouseId;
         this.status = Objects.requireNonNull(status);
         this.lat = lat;
