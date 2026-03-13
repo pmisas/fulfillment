@@ -1,102 +1,95 @@
-/*package com.fulfillment.orderservice.domain.model;
+package com.fulfillment.orderservice.domain.model;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
-public class OrderStateHistoryTest {
-    
+class OrderStateHistoryTest {
+
     @Test
-    void createOrderStateHistory_whenValid__shouldCreate() {
+    void createOrderStateHistory_shouldCreateInitialHistory() {
+        OrderStateHistory history = OrderStateHistory.createOrderStateHistory("hist-1", "order-1");
 
-        String orderId = "id01";
-
-        OrderStateHistory history = OrderStateHistory.createOrderStateHistory(orderId);
-
-        assertNotNull(history.getHistoryId());
-        assertEquals(orderId, history.getOrderId());
+        assertEquals("hist-1", history.getHistoryId());
+        assertEquals("order-1", history.getOrderId());
         assertNull(history.getFromStatus());
-        assertEquals(Status.CREATED, history.getToStatus());
-        assertNotNull(history.getchangedAt());
+        assertEquals(Status.RECEIVED, history.getToStatus());
+        assertNotNull(history.getChangedAt());
     }
 
     @Test
-    void reateOrderStateHistory_whenOrderIsBlank__shouldThrowIllegalArgumentException() {
-
-        String orderId = " ";
-
-        assertThrows(IllegalArgumentException.class, 
-                        () -> OrderStateHistory.createOrderStateHistory(orderId)
+    void createOrderStateHistory_shouldThrowWhenHistoryIdIsBlank() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderStateHistory.createOrderStateHistory(" ", "order-1")
         );
+
+        assertEquals("historyId must be not blank", ex.getMessage());
     }
 
     @Test
-    void transitionOrderStateHistory_shouldCreate() {
+    void createOrderStateHistory_shouldThrowWhenOrderIdIsBlank() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderStateHistory.createOrderStateHistory("hist-1", " ")
+        );
 
-        String orderId = "id01";
-        Status fromStatus = Status.CONFIRMED;
-        Status toStatus = Status.PACKED;
+        assertEquals("orderId must be not blank", ex.getMessage());
+    }
 
-        OrderStateHistory history = OrderStateHistory
-                        .transitionOrderStateHistory(
-                            orderId, 
-                            fromStatus, 
-                            toStatus
+    @Test
+    void transitionOrderStateHistory_shouldCreateTransitionHistory() {
+        OrderStateHistory history = OrderStateHistory.transitionOrderStateHistory(
+            "order-1",
+            Status.RECEIVED,
+            Status.VALIDATED
         );
 
         assertNotNull(history.getHistoryId());
-        assertEquals(orderId, history.getOrderId());
-        assertEquals(fromStatus, history.getFromStatus());
-        assertEquals(toStatus, history.getToStatus());
-        assertNotNull(history.getchangedAt());
+        assertEquals("order-1", history.getOrderId());
+        assertEquals(Status.RECEIVED, history.getFromStatus());
+        assertEquals(Status.VALIDATED, history.getToStatus());
+        assertNotNull(history.getChangedAt());
     }
 
     @Test
-    void transitionOrderStateHistory_whenFromIsNull_shoulThrowNullPointerException() {
+    void transitionOrderStateHistory_shouldThrowWhenFromStatusIsNull() {
+        NullPointerException ex = assertThrows(
+            NullPointerException.class,
+            () -> OrderStateHistory.transitionOrderStateHistory("order-1", null, Status.VALIDATED)
+        );
 
-        String orderId = "id01";
-        Status fromStatus = null;
-        Status toStatus = Status.PACKED;
-
-        assertThrows(NullPointerException.class,() -> 
-                        OrderStateHistory.transitionOrderStateHistory(
-                            orderId, 
-                            fromStatus, 
-                            toStatus
-                        ));
+        assertEquals("fromStatus", ex.getMessage());
     }
 
     @Test
-    void transitionOrderStateHistory_whenToIsNull_shoulThrowNullPointerException() {
+    void transitionOrderStateHistory_shouldThrowWhenStatusesAreEqual() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> OrderStateHistory.transitionOrderStateHistory("order-1", Status.RECEIVED, Status.RECEIVED)
+        );
 
-        String orderId = "id01";
-        Status fromStatus = Status.PACKED;
-        Status toStatus = null;
-
-        assertThrows(NullPointerException.class,() -> 
-                        OrderStateHistory.transitionOrderStateHistory(
-                            orderId, 
-                            fromStatus, 
-                            toStatus
-                        ));
+        assertEquals("fromStatus and toStatus must be different", ex.getMessage());
     }
 
     @Test
-    void transitionOrderStateHistory_whenToEqualsFrom_shouldThrowIllegalArgumentEception() {
-        
-        String orderId = "id01";
-        Status fromStatus = Status.PACKED;
-        Status toStatus = Status.PACKED;
+    void restore_shouldRestoreHistoryCorrectly() {
+        Instant now = Instant.now();
 
-        assertThrows(IllegalArgumentException.class,() -> 
-                        OrderStateHistory.transitionOrderStateHistory(
-                            orderId, 
-                            fromStatus, 
-                            toStatus
-                        ));
+        OrderStateHistory history = OrderStateHistory.restore(
+            "hist-1",
+            "order-1",
+            Status.RECEIVED,
+            Status.VALIDATED,
+            now
+        );
+
+        assertEquals("hist-1", history.getHistoryId());
+        assertEquals("order-1", history.getOrderId());
+        assertEquals(Status.RECEIVED, history.getFromStatus());
+        assertEquals(Status.VALIDATED, history.getToStatus());
+        assertEquals(now, history.getChangedAt());
     }
 }
-*/
