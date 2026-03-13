@@ -15,7 +15,6 @@ import com.fulfillment.inventoryservice.domain.ports.InventoryItemsRepository;
 @Profile("local")
 public class InMemoryInventoryItemsRepository implements InventoryItemsRepository {
 
-    // outer key: warehouseId, inner key: sku
     private final Map<String, Map<String, InventoryItem>> store = new ConcurrentHashMap<>();
 
     @Override

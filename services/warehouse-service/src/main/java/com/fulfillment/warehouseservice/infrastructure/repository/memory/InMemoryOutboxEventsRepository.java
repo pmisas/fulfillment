@@ -16,13 +16,11 @@ public class InMemoryOutboxEventsRepository implements OutboxEventsRepository {
 
     @Override
     public boolean savePendingIfAbsent(OutboxPendingEvent event) {
-        // In local mode, always accept new events (no persistence)
         return true;
     }
 
     @Override
     public boolean resetToPendingIfProcessed(String eventId) {
-        // In local mode, nothing to reset
         return false;
     }
 }
