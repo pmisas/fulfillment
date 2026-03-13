@@ -12,6 +12,5 @@ public class InMemoryOutboxEventsRepository implements OutboxEventsRepository {
 
     @Override
     public void savePending(OutboxPendingEvent event) {
-        // no-op in local profile: outbox events are not published
     }
 }
