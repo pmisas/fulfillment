@@ -82,7 +82,6 @@ public class OrderCancelledHandler implements OrderEventHandler {
                     return Mono.empty();
                 }
 
-                // Release inventory first, then update order status
                 return releaseInventoryIfNeeded(reservationId, orderId)
                     .then(persistCancelled(order, reason));
             });

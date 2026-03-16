@@ -43,7 +43,6 @@ class OrderStateProcessorServiceImplTest {
             "{}"
         );
 
-        // Must complete without throwing — unknown events are silently ignored
         assertDoesNotThrow(() -> service.process(command).block());
     }
 

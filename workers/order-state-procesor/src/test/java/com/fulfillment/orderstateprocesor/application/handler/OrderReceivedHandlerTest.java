@@ -163,7 +163,6 @@ class OrderReceivedHandlerTest {
 
     @Test
     void handle_shouldNotAppendHistoryWhenSaveReturnedFalse() {
-        // Concurrent update: saveIfStatusIs returns false (another handler already changed status)
         Order order = Order.restore(
             "order-1",
             null,
@@ -187,7 +186,6 @@ class OrderReceivedHandlerTest {
         ));
         when(inventoryClient.reserveAll(eq("resv:order-1"), eq("order-1"), eq("wh-1"), anyList()))
             .thenReturn(Mono.just(InventoryClient.ReserveResult.RESERVED));
-        // Concurrent update: status was already changed by another pod
         when(orderRepo.saveIfStatusIs(any(), eq(Status.RECEIVED))).thenReturn(Mono.just(false));
 
         String payload = """

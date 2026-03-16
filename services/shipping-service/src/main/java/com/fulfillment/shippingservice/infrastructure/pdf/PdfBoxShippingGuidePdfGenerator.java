@@ -56,7 +56,6 @@ public class PdfBoxShippingGuidePdfGenerator implements ShippingGuidePdfGenerato
                 separator(cs, pageWidth, y);
                 y -= 15;
 
-                // Sub-header for preliminary guide
                 cs.setNonStrokingColor(Color.BLACK);
                 writeText(cs, bold, 14, MARGIN, y, "GUIA PRELIMINAR - PENDIENTE DE DESPACHO");
                 y -= 10;
@@ -64,7 +63,6 @@ public class PdfBoxShippingGuidePdfGenerator implements ShippingGuidePdfGenerato
                 separator(cs, pageWidth, y);
                 y -= 20;
 
-                // Shipment fields
                 cs.setNonStrokingColor(Color.BLACK);
                 y = field(cs, bold, regular, "Shipment ID:", shipment.getShipmentId(), y);
                 y = field(cs, bold, regular, "Order ID:", shipment.getOrderId(), y);
@@ -78,7 +76,6 @@ public class PdfBoxShippingGuidePdfGenerator implements ShippingGuidePdfGenerato
                 separator(cs, pageWidth, y);
                 y -= 18;
 
-                // Items section
                 writeText(cs, bold, 11, MARGIN, y, "ARTICULOS");
                 y -= 18;
 

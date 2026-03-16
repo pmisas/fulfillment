@@ -21,7 +21,6 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
     private final DynamoDbClient dynamo;
     private final SqsClient sqs;
 
-    // Production constructor: reads config from environment variables
     public OutboxPublisherHandler() {
         this.tableName = env("OUTBOX_TABLE", "OutboxEvents");
         this.gsiName   = env("OUTBOX_GSI", "ByPublishStatus");
@@ -38,7 +37,6 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
         this.sqs = SqsClient.builder().region(region).build();
     }
 
-    // Package-private constructor for unit testing
     OutboxPublisherHandler(String tableName, String gsiName, String queueUrl, int maxBatch,
                            DynamoDbClient dynamo, SqsClient sqs) {
         this.tableName = tableName;
@@ -214,7 +212,6 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
 
             dynamo.updateItem(req);
         } catch (Exception ignored) {
-            // swallow
         }
     }
 
