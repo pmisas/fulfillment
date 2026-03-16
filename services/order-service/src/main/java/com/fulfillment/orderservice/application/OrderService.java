@@ -7,9 +7,5 @@ public interface OrderService {
     Order create(CreateOrderCommand command, String idempotencyKey);
     Order getById(String orderId);
     
-    /**
-     * @param orderId the order ID to cancel
-     * @throws IllegalStateException if order is already shipped
-     */
     void cancel(String orderId);
 }

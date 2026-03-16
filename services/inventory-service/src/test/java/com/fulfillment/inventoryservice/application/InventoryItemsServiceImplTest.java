@@ -130,8 +130,8 @@ class InventoryItemsServiceImplTest {
         );
 
         when(repo.findBySkus("wh-1", List.of("SKU-1", "SKU-2"))).thenReturn(List.of(
-            InventoryItem.restore("wh-1", "SKU-1", 10, 3, Instant.now()), // available 7
-            InventoryItem.restore("wh-1", "SKU-2", 5, 1, Instant.now())   // available 4
+            InventoryItem.restore("wh-1", "SKU-1", 10, 3, Instant.now()),
+            InventoryItem.restore("wh-1", "SKU-2", 5, 1, Instant.now())
         ));
 
         AvailabilityResult result = service.checkAvailability(query);

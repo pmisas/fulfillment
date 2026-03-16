@@ -16,11 +16,11 @@ public class InMemoryOutboxEventsRepository implements OutboxEventsRepository {
 
     @Override
     public boolean savePendingIfAbsent(OutboxPendingEvent event) {
-        return true;
+        return processedEvents.add(event.eventId());
     }
 
     @Override
     public boolean resetToPendingIfProcessed(String eventId) {
-        return false;
+        return processedEvents.remove(eventId);
     }
 }

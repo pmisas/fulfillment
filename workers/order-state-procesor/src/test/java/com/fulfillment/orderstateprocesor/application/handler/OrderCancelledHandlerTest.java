@@ -120,9 +120,7 @@ class OrderCancelledHandlerTest {
 
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
-        // For idempotency: still attempts to release inventory
         verify(inventoryClient).releaseReservation("resv:order-1");
-        // But does NOT try to persist a new transition
         verify(orderRepo, never()).saveIfStatusIs(any(), any());
         verify(historyRepo, never()).append(any());
     }
@@ -189,7 +187,6 @@ class OrderCancelledHandlerTest {
         );
 
         when(orderRepo.findById("order-1")).thenReturn(Mono.just(order));
-        // Inventory service returns an error (e.g. reservation already gone)
         when(inventoryClient.releaseReservation("resv:order-1"))
             .thenReturn(Mono.error(new RuntimeException("reservation not found")));
         when(orderRepo.saveIfStatusIs(any(), eq(Status.PICKED))).thenReturn(Mono.just(true));
@@ -197,7 +194,6 @@ class OrderCancelledHandlerTest {
 
         String payload = "{\"orderId\":\"order-1\",\"reason\":\"USER_REQUEST\"}";
 
-        // Error from inventory must NOT propagate — it's swallowed
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
         verify(orderRepo).saveIfStatusIs(
@@ -209,7 +205,6 @@ class OrderCancelledHandlerTest {
 
     @Test
     void handle_shouldNotAppendHistoryWhenSaveReturnedFalse() {
-        // Simulates a concurrent update: another handler already changed the status
         Order order = Order.restore(
             "order-1",
             "wh-1",
@@ -230,7 +225,6 @@ class OrderCancelledHandlerTest {
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
         verify(orderRepo).saveIfStatusIs(any(), eq(Status.VALIDATED));
-        // Concurrent update detected: history must NOT be written
         verify(historyRepo, never()).append(any());
     }
 }

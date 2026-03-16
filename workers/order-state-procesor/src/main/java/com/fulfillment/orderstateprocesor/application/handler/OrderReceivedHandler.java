@@ -89,11 +89,12 @@ public class OrderReceivedHandler implements OrderEventHandler {
             .flatMap(rankedIds -> tryReserveInOrder(rankedIds, reservationId, order, skus))
             .doOnNext(warehouseId -> log.info("tryReserveInOrder succeeded with warehouse={} for order={}", 
                                               warehouseId, order.getOrderId()))
-            .flatMap(warehouseId -> persistValidated(order, warehouseId))
+            .flatMap(warehouseId -> persistValidated(order, warehouseId).thenReturn(warehouseId))
             .switchIfEmpty(Mono.defer(() -> {
                 log.info("No warehouse found for order={}, executing persistRejected", order.getOrderId());
-                return persistRejected(order);
-            }));
+                return persistRejected(order).thenReturn("REJECTED");
+            }))
+            .then();
     }
 
     private Mono<String> tryReserveInOrder(List<String> rankedWarehouseIds,

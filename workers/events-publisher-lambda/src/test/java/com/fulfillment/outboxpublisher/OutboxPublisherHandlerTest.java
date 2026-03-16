@@ -82,8 +82,8 @@ class OutboxPublisherHandlerTest {
         assertEquals(0, result.get("published"));
         assertEquals(0, result.get("failed"));
 
-        verify(sqs, never()).sendMessage(any());
-        verify(dynamo, never()).updateItem(any());
+        verify(sqs, never()).sendMessage(any(SendMessageRequest.class));
+        verify(dynamo, never()).updateItem(any(UpdateItemRequest.class));
     }
 
     @Test
@@ -97,7 +97,6 @@ class OutboxPublisherHandlerTest {
         when(dynamo.query(any(QueryRequest.class))).thenReturn(queryResponse);
         when(sqs.sendMessage(any(SendMessageRequest.class)))
             .thenThrow(new RuntimeException("SQS unavailable"));
-        // safeMarkFailed also calls updateItem — allow it
         when(dynamo.updateItem(any(UpdateItemRequest.class))).thenReturn(UpdateItemResponse.builder().build());
 
         Map<String, Object> result = handler.handleRequest(Map.of(), context);
@@ -111,8 +110,6 @@ class OutboxPublisherHandlerTest {
 
     @Test
     void handleRequest_shouldSkipItemWhenConditionalUpdateFails() {
-        // Simulates a race condition: two Lambda instances process the same event;
-        // the second one gets ConditionalCheckFailedException on markAsSent.
         Map<String, AttributeValue> item = pendingItem("evt-1", "OrderReceived", "order-1", "{\"orderId\":\"order-1\"}");
 
         QueryResponse queryResponse = QueryResponse.builder()
@@ -127,7 +124,7 @@ class OutboxPublisherHandlerTest {
 
         assertEquals(1, result.get("found"));
         assertEquals(0, result.get("published"));
-        assertEquals(1, result.get("skipped")); // not published by this instance
+        assertEquals(1, result.get("skipped")); 
         assertEquals(0, result.get("failed"));
 
         verify(sqs).sendMessage(any(SendMessageRequest.class));
@@ -135,12 +132,10 @@ class OutboxPublisherHandlerTest {
 
     @Test
     void handleRequest_shouldSkipItemWhenEventIdIsNull() {
-        // Item with no eventId is invalid and must be skipped
         Map<String, AttributeValue> item = new HashMap<>();
         item.put("eventType",   AttributeValue.builder().s("OrderReceived").build());
         item.put("aggregateId", AttributeValue.builder().s("order-1").build());
         item.put("payload",     AttributeValue.builder().s("{\"orderId\":\"order-1\"}").build());
-        // No "eventId" key
 
         QueryResponse queryResponse = QueryResponse.builder()
             .items(List.of(item))
@@ -155,11 +150,10 @@ class OutboxPublisherHandlerTest {
         assertEquals(1, result.get("skipped"));
         assertEquals(0, result.get("failed"));
 
-        verify(sqs, never()).sendMessage(any());
-        verify(dynamo, never()).updateItem(any());
+        verify(sqs, never()).sendMessage(any(SendMessageRequest.class));
+        verify(dynamo, never()).updateItem(any(UpdateItemRequest.class));
     }
 
-    // --- helpers ---
 
     private Map<String, AttributeValue> pendingItem(String eventId, String eventType,
                                                       String aggregateId, String payload) {

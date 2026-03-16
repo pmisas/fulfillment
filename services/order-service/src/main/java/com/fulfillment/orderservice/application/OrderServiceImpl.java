@@ -178,7 +178,6 @@ public class OrderServiceImpl implements OrderService {
         log.info("Publishing OrderCancelled event (worker will cancel and release inventory): orderId={}, eventId={}", 
                  orderId, eventId);
     
-        // Just save the event, don't modify the order
         outboxRepo.savePending(outboxEvent);
     
         log.info("OrderCancelled event published successfully: orderId={}", orderId);
