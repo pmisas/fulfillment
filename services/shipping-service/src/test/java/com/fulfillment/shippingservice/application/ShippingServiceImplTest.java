@@ -328,6 +328,24 @@ class ShippingServiceImplTest {
     }
 
     @Test
+    void markAsDelivered_shouldThrowWhenConditionalSaveFails() {
+        Shipment shipped = Shipment.createShipment(
+            "ship-1",
+            "order-1",
+            "wh-1",
+            CarrierCode.INTERNAL_CARRIER,
+            List.of(ShipmentItem.createShipmentItem("SKU-1", 2)),
+            Instant.now().plusSeconds(86400)
+        ).withStatus(ShipmentStatus.SHIPPED);
+
+        when(shipmentRepository.findById("ship-1")).thenReturn(Optional.of(shipped));
+        when(shipmentRepository.saveIfStatusMatches(any(), eq(ShipmentStatus.SHIPPED)))
+            .thenReturn(Optional.empty());
+
+        assertThrows(InvalidStatusTransitionException.class, () -> service.markAsDelivered("ship-1"));
+    }
+
+    @Test
     void getShippingGuideUrl_shouldThrowWhenGuideIsNotReady() {
         Shipment shipment = Shipment.createShipment(
             "ship-1",

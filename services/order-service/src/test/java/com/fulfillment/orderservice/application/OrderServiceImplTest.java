@@ -265,4 +265,23 @@ class OrderServiceImplTest {
         verify(outboxRepo).savePending(any());
         verify(orderRepo, never()).save(any());
     }
+
+    @Test
+    void cancel_shouldPublishEventWhenOrderIsReceived() {
+        Order received = mock(Order.class);
+        when(received.getOrderId()).thenReturn("order-1");
+        when(received.getStatus()).thenReturn(Status.RECEIVED);
+        when(orderRepo.findById("order-1")).thenReturn(Optional.of(received));
+
+        service.cancel("order-1");
+
+        ArgumentCaptor<OutboxPendingEvent> captor = ArgumentCaptor.forClass(OutboxPendingEvent.class);
+        verify(outboxRepo).savePending(captor.capture());
+
+        OutboxPendingEvent event = captor.getValue();
+        assertEquals("OrderCancelled", event.eventType());
+        assertEquals("order-1", event.aggregateId());
+        assertTrue(event.payload().contains("\"orderId\":\"order-1\""));
+        verify(orderRepo, never()).save(any());
+    }
 }

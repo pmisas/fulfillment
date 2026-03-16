@@ -13,23 +13,40 @@ import java.time.Instant;
 import java.util.*;
 
 public class OutboxPublisherHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
-    private final String tableName = env("OUTBOX_TABLE", "OutboxEvents");
-    private final String gsiName   = env("OUTBOX_GSI", "ByPublishStatus");
-    private final String queueUrl  = env("SQS_QUEUE_URL", null);
-    private final int maxBatch     = Integer.parseInt(env("MAX_BATCH", "25"));
-    private final String regionStr = env("AWS_REGION", "us-east-1");
+    private final String tableName;
+    private final String gsiName;
+    private final String queueUrl;
+    private final int maxBatch;
 
     private final DynamoDbClient dynamo;
     private final SqsClient sqs;
 
+    // Production constructor: reads config from environment variables
     public OutboxPublisherHandler() {
+        this.tableName = env("OUTBOX_TABLE", "OutboxEvents");
+        this.gsiName   = env("OUTBOX_GSI", "ByPublishStatus");
+        this.queueUrl  = env("SQS_QUEUE_URL", null);
+        this.maxBatch  = Integer.parseInt(env("MAX_BATCH", "25"));
+        String regionStr = env("AWS_REGION", "us-east-1");
+
+        if (this.queueUrl == null || this.queueUrl.isBlank()) {
+            throw new IllegalStateException("Missing env var SQS_QUEUE_URL");
+        }
+
         Region region = Region.of(regionStr);
         this.dynamo = DynamoDbClient.builder().region(region).build();
         this.sqs = SqsClient.builder().region(region).build();
+    }
 
-        if (queueUrl == null || queueUrl.isBlank()) {
-            throw new IllegalStateException("Missing env var SQS_QUEUE_URL");
-        }
+    // Package-private constructor for unit testing
+    OutboxPublisherHandler(String tableName, String gsiName, String queueUrl, int maxBatch,
+                           DynamoDbClient dynamo, SqsClient sqs) {
+        this.tableName = tableName;
+        this.gsiName   = gsiName;
+        this.queueUrl  = queueUrl;
+        this.maxBatch  = maxBatch;
+        this.dynamo    = dynamo;
+        this.sqs       = sqs;
     }
 
     @Override
