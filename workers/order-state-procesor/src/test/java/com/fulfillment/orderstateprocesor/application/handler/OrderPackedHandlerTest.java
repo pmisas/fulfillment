@@ -101,4 +101,31 @@ class OrderPackedHandlerTest {
         verify(inventoryClient, never()).consumeReservation(anyString());
         verify(shippingClient, never()).createShipment(anyString(), anyString(), anyList());
     }
+
+    @Test
+    void handle_shouldIgnoreWhenWarehouseIdDoesNotMatch() {
+        Order order = Order.restore(
+            "order-1",
+            "wh-1",
+            Status.PICKED,
+            4.7110,
+            -74.0721,
+            Instant.now(),
+            Instant.now(),
+            List.of(OrderItem.createOrderItem("SKU-1", 2))
+        );
+
+        when(orderRepo.findById("order-1")).thenReturn(Mono.just(order));
+
+        String payload = """
+            {"orderId":"order-1","warehouseId":"wh-2"}
+            """;
+
+        assertDoesNotThrow(() -> handler.handle(payload).block());
+
+        verify(inventoryClient, never()).consumeReservation(anyString());
+        verify(shippingClient, never()).createShipment(anyString(), anyString(), anyList());
+        verify(orderRepo, never()).saveIfStatusIs(any(), any());
+        verify(historyRepo, never()).append(any());
+    }
 }
