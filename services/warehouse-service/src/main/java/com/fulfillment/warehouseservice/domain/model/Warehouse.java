@@ -23,7 +23,7 @@ public class Warehouse {
             double lng,
             Instant createdAt){
         this.warehouseId = requireNonBlank(warehouseId, "warehouseId");
-        this.city = requireNonBlank(city.trim().toLowerCase(), "city");
+        this.city = requireNonBlank(city, "city").trim().toLowerCase();
 
         if (lat < -90 || lat > 90) 
             throw new IllegalArgumentException("Latitude must be between -90 and 90");
