@@ -77,6 +77,9 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
 
     @Override
     public List<InventoryItem> getByWarehouseId(String warehouseId) {
+        if (!warehouseClient.existsById(warehouseId)) {
+            throw new WarehouseNotFoundException(warehouseId);
+        }
         return repo.findByWarehouseId(warehouseId);
     }
 
