@@ -34,7 +34,7 @@ public class WarehouseInternalController {
         if (warehouseService.existsById(id)) {
             return ResponseEntity.ok().build();
         }
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
     }
 
     @GetMapping()
