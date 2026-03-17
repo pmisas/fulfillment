@@ -145,14 +145,14 @@ Responsable de la creación del envío y administración de su ciclo de vida.
 **Endpoints principales:**
 
 Internos
-POST /internal/v1/shipments
+- POST /internal/v1/shipments
 
 Públicos
-GET /api/v1/shipments/{id}
-GET /api/v1/shipments
-POST /api/v1/shipments/{id}/ship
-POST /api/v1/shipments/{id}/deliver
-GET /api/v1/shipments/{id}/guide
+- GET /api/v1/shipments/{id}
+- GET /api/v1/shipments
+- POST /api/v1/shipments/{id}/ship
+- POST /api/v1/shipments/{id}/deliver
+- GET /api/v1/shipments/{id}/guide
 
 ### 5. order-state-processor
 
