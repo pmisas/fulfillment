@@ -80,8 +80,12 @@ public class InMemoryInventoryTransactions
     @Override
     public synchronized void restockAtomically(String warehouseId, List<Item> items) {
         for (var item : items) {
-            itemsRepository.findById(warehouseId, item.sku())
-                    .ifPresent(existing -> itemsRepository.save(existing.restock(item.quantity())));
+            Optional<InventoryItem> existing = itemsRepository.findById(warehouseId, item.sku());
+            if (existing.isPresent()) {
+                itemsRepository.save(existing.get().restock(item.quantity()));
+            } else {
+                itemsRepository.save(InventoryItem.createInventoryItem(warehouseId, item.sku(), item.quantity()));
+            }
         }
     }
 }
