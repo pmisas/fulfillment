@@ -44,6 +44,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldReleaseInventoryAndCancelWhenOrderIsValidated() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.VALIDATED,
             4.7110,
@@ -74,6 +75,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldReleaseInventoryAndCancelWhenOrderIsReceived() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             null,
             Status.RECEIVED,
             4.7110,
@@ -104,6 +106,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldAttemptInventoryReleaseButNotSaveWhenOrderAlreadyCanceled() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.CANCELED,
             4.7110,
@@ -129,6 +132,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldSkipEverythingWhenOrderIsShipped() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.SHIPPED,
             4.7110,
@@ -153,6 +157,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldSkipEverythingWhenOrderIsRejected() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             null,
             Status.REJECTED,
             4.7110,
@@ -177,6 +182,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldSwallowInventoryClientErrorAndStillCancelOrder() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.PICKED,
             4.7110,
@@ -207,6 +213,7 @@ class OrderCancelledHandlerTest {
     void handle_shouldNotAppendHistoryWhenSaveReturnedFalse() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.VALIDATED,
             4.7110,

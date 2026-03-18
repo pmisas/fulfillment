@@ -15,6 +15,7 @@ import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStat
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
+import com.fulfillment.orderservice.domain.exception.OrderNotOwnedException;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.OrderItem;
 import com.fulfillment.orderservice.domain.model.OrderStateHistory;
@@ -24,6 +25,10 @@ import com.fulfillment.orderservice.domain.ports.OrderRepository;
 import com.fulfillment.orderservice.domain.ports.OutboxEventsRepository;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction.OutboxPendingEvent;
+
+import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
+
+import java.util.Objects;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -55,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order create(CreateOrderCommand command, String idempotencyKey) {
 
-        String normalizedKey = idempotencyKey.trim();
+        String normalizedKey = requireNonBlank(idempotencyKey, "idempotencyKey").trim();
 
         var existing = idempotencyStore.get(normalizedKey);
         if (existing.isPresent()) {
@@ -121,7 +126,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(i -> OrderItem.createOrderItem(i.sku(), i.quantity()))
                 .toList();
 
-        return Order.createOrder(orderId, command.lat(), command.lng(), items);
+        return Order.createOrder(orderId, command.operatorId(), command.lat(), command.lng(), items);
     }
 
     private Order resolveExistingKey(String normalizedKey, String storedValue) {
@@ -135,17 +140,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Order getById(String orderId) {
-        return orderRepo.findById(orderId)
+    public Order getById(String orderId, String requesterId, boolean isAdmin) {
+        Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+        assertOwnership(order, requesterId, isAdmin);
+        return order;
     }
 
     @Override
-    public void cancel(String orderId) {
-    
+    public void cancel(String orderId, String requesterId, boolean isAdmin) {
+
         log.info("Requesting order cancellation: orderId={}", orderId);
-    
-        Order current = getById(orderId);
+
+        Order current = getById(orderId, requesterId, isAdmin);
     
         log.info("Order {} current status={}", orderId, current.getStatus());
     
@@ -183,6 +190,12 @@ public class OrderServiceImpl implements OrderService {
         log.info("OrderCancelled event published successfully: orderId={}", orderId);
     }
     
+    private void assertOwnership(Order order, String requesterId, boolean isAdmin) {
+        if (!isAdmin && !Objects.equals(order.getOperatorId(), requesterId)) {
+            throw new OrderNotOwnedException(order.getOrderId());
+        }
+    }
+
     private String buildOrderReceivedPayload(Order order) {
         try {
             var payload = new OrderReceivedEventPayload(

@@ -59,6 +59,7 @@ class OrderServiceImplTest {
     @Test
     void create_shouldCreateOrderWhenIdempotencyKeyIsNew() {
         CreateOrderCommand command = new CreateOrderCommand(
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(new CreateOrderCommand.Item("SKU-1", 2))
@@ -93,6 +94,7 @@ class OrderServiceImplTest {
     @Test
     void create_shouldReturnExistingOrderWhenIdempotencyKeyAlreadyPointsToOrderId() {
         CreateOrderCommand command = new CreateOrderCommand(
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(new CreateOrderCommand.Item("SKU-1", 2))
@@ -100,6 +102,7 @@ class OrderServiceImplTest {
 
         Order existingOrder = Order.createOrder(
             "order-123",
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(OrderItem.createOrderItem("SKU-1", 2))
@@ -118,6 +121,7 @@ class OrderServiceImplTest {
     @Test
     void create_shouldThrowWhenIdempotencyKeyIsPending() {
         CreateOrderCommand command = new CreateOrderCommand(
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(new CreateOrderCommand.Item("SKU-1", 2))
@@ -133,6 +137,7 @@ class OrderServiceImplTest {
     @Test
     void create_shouldReleaseIdempotencyKeyWhenTransactionFails() {
         CreateOrderCommand command = new CreateOrderCommand(
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(new CreateOrderCommand.Item("SKU-1", 2))
@@ -155,6 +160,7 @@ class OrderServiceImplTest {
     @Test
     void create_shouldThrowWhenFinalizeFails() {
         CreateOrderCommand command = new CreateOrderCommand(
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(new CreateOrderCommand.Item("SKU-1", 2))
@@ -171,6 +177,7 @@ class OrderServiceImplTest {
     void getById_shouldReturnOrderWhenExists() {
         Order order = Order.createOrder(
             "order-123",
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(OrderItem.createOrderItem("SKU-1", 2))
@@ -178,7 +185,7 @@ class OrderServiceImplTest {
 
         when(orderRepo.findById("order-123")).thenReturn(Optional.of(order));
 
-        Order result = service.getById("order-123");
+        Order result = service.getById("order-123", "operator-1", false);
 
         assertSame(order, result);
     }
@@ -187,14 +194,14 @@ class OrderServiceImplTest {
     void getById_shouldThrowWhenOrderDoesNotExist() {
         when(orderRepo.findById("missing")).thenReturn(Optional.empty());
 
-        assertThrows(OrderNotFoundException.class, () -> service.getById("missing"));
+        assertThrows(OrderNotFoundException.class, () -> service.getById("missing", "operator-1", false));
     }
 
     @Test
     void cancel_shouldThrowWhenOrderDoesNotExist() {
         when(orderRepo.findById("missing")).thenReturn(Optional.empty());
 
-        assertThrows(OrderNotFoundException.class, () -> service.cancel("missing"));
+        assertThrows(OrderNotFoundException.class, () -> service.cancel("missing", "operator-1", false));
 
         verify(outboxRepo, never()).savePending(any());
     }
@@ -202,10 +209,11 @@ class OrderServiceImplTest {
     @Test
     void cancel_shouldRejectCancellationWhenOrderIsShipped() {
         Order shipped = mock(Order.class);
+        when(shipped.getOperatorId()).thenReturn("operator-1");
         when(shipped.getStatus()).thenReturn(Status.SHIPPED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(shipped));
 
-        assertThrows(RuntimeException.class, () -> service.cancel("order-1"));
+        assertThrows(RuntimeException.class, () -> service.cancel("order-1", "operator-1", false));
 
         verify(outboxRepo, never()).savePending(any());
     }
@@ -213,10 +221,11 @@ class OrderServiceImplTest {
     @Test
     void cancel_shouldDoNothingWhenOrderAlreadyCanceled() {
         Order canceled = mock(Order.class);
+        when(canceled.getOperatorId()).thenReturn("operator-1");
         when(canceled.getStatus()).thenReturn(Status.CANCELED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(canceled));
 
-        assertDoesNotThrow(() -> service.cancel("order-1"));
+        assertDoesNotThrow(() -> service.cancel("order-1", "operator-1", false));
 
         verify(outboxRepo, never()).savePending(any());
     }
@@ -224,10 +233,11 @@ class OrderServiceImplTest {
     @Test
     void cancel_shouldDoNothingWhenOrderAlreadyRejected() {
         Order rejected = mock(Order.class);
+        when(rejected.getOperatorId()).thenReturn("operator-1");
         when(rejected.getStatus()).thenReturn(Status.REJECTED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(rejected));
 
-        assertDoesNotThrow(() -> service.cancel("order-1"));
+        assertDoesNotThrow(() -> service.cancel("order-1", "operator-1", false));
 
         verify(outboxRepo, never()).savePending(any());
     }
@@ -236,10 +246,11 @@ class OrderServiceImplTest {
     void cancel_shouldPublishOrderCancelledEventWhenOrderIsCancelable() {
         Order validated = mock(Order.class);
         when(validated.getOrderId()).thenReturn("order-1");
+        when(validated.getOperatorId()).thenReturn("operator-1");
         when(validated.getStatus()).thenReturn(Status.VALIDATED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(validated));
 
-        service.cancel("order-1");
+        service.cancel("order-1", "operator-1", false);
 
         ArgumentCaptor<OutboxPendingEvent> captor = ArgumentCaptor.forClass(OutboxPendingEvent.class);
         verify(outboxRepo).savePending(captor.capture());
@@ -257,10 +268,11 @@ class OrderServiceImplTest {
     void cancel_shouldNotPersistOrderDirectly_onlyPublishEvent() {
         Order validated = mock(Order.class);
         when(validated.getOrderId()).thenReturn("order-1");
+        when(validated.getOperatorId()).thenReturn("operator-1");
         when(validated.getStatus()).thenReturn(Status.VALIDATED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(validated));
 
-        service.cancel("order-1");
+        service.cancel("order-1", "operator-1", false);
 
         verify(outboxRepo).savePending(any());
         verify(orderRepo, never()).save(any());
@@ -270,10 +282,11 @@ class OrderServiceImplTest {
     void cancel_shouldPublishEventWhenOrderIsReceived() {
         Order received = mock(Order.class);
         when(received.getOrderId()).thenReturn("order-1");
+        when(received.getOperatorId()).thenReturn("operator-1");
         when(received.getStatus()).thenReturn(Status.RECEIVED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(received));
 
-        service.cancel("order-1");
+        service.cancel("order-1", "operator-1", false);
 
         ArgumentCaptor<OutboxPendingEvent> captor = ArgumentCaptor.forClass(OutboxPendingEvent.class);
         verify(outboxRepo).savePending(captor.capture());

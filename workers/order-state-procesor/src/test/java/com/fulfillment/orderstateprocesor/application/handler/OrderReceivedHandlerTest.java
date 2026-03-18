@@ -50,6 +50,7 @@ class OrderReceivedHandlerTest {
     void handle_shouldValidateOrderWhenWarehouseCanReserve() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             null,
             Status.RECEIVED,
             4.7110,
@@ -89,6 +90,7 @@ class OrderReceivedHandlerTest {
     void handle_shouldRejectOrderWhenNoWarehouseCanReserve() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             null,
             Status.RECEIVED,
             4.7110,
@@ -126,6 +128,7 @@ class OrderReceivedHandlerTest {
     void handle_shouldSkipProcessingWhenOrderAlreadyValidated() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.VALIDATED,
             4.7110,
@@ -165,6 +168,7 @@ class OrderReceivedHandlerTest {
     void handle_shouldNotAppendHistoryWhenSaveReturnedFalse() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             null,
             Status.RECEIVED,
             4.7110,

@@ -16,6 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrderEntity {
     
     private String orderId;
+    private String operatorId;
     private String warehouseId;
     private String status;
     private Instant createdAt;

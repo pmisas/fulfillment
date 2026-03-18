@@ -4,6 +4,7 @@ import java.util.List;
 
 
 public record CreateOrderCommand(
+    String operatorId,
     Double lat,
     Double lng,
     List<Item> items) {

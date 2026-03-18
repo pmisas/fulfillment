@@ -12,6 +12,7 @@ import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStat
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
+import com.fulfillment.orderservice.domain.exception.OrderNotOwnedException;
 import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
 
@@ -31,6 +32,15 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.NOT_FOUND;
         ApiErrorResponse body = new ApiErrorResponse(
                 status.value(), "ORDER_NOT_FOUND", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(OrderNotOwnedException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderNotOwned(
+            OrderNotOwnedException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "ORDER_ACCESS_DENIED", ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 

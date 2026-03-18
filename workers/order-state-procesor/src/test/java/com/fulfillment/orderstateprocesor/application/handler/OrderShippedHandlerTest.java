@@ -40,6 +40,7 @@ class OrderShippedHandlerTest {
     void handle_shouldTransitionPackedOrderToShipped() {
         Order packed = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.PACKED,
             4.7110,
@@ -67,6 +68,7 @@ class OrderShippedHandlerTest {
     void handle_shouldIgnoreWhenOrderAlreadyShipped() {
         Order shipped = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.SHIPPED,
             4.7110,

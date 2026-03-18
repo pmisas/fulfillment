@@ -40,6 +40,7 @@ class OrderPickingHandlerTest {
     void handle_shouldTransitionValidatedOrderToPicked() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             null,
             Status.VALIDATED,
             4.7110,
@@ -67,6 +68,7 @@ class OrderPickingHandlerTest {
     void handle_shouldIgnoreWhenStatusIsNotValidated() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.RECEIVED,
             4.7110,
@@ -92,6 +94,7 @@ class OrderPickingHandlerTest {
     void handle_shouldIgnoreWhenWarehouseDoesNotMatch() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-2",
             Status.VALIDATED,
             4.7110,

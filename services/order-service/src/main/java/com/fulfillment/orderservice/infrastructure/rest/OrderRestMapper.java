@@ -9,8 +9,9 @@ public final class OrderRestMapper {
     
     private OrderRestMapper() {}
 
-    public static CreateOrderCommand toCommand(CreateOrderRequest req){
+    public static CreateOrderCommand toCommand(CreateOrderRequest req, String operatorId){
         return new CreateOrderCommand(
+            operatorId,
             req.lat(),
             req.lng(),
             req.items().stream()
