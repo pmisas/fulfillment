@@ -5,5 +5,5 @@ public record ShipmentShippedPayload(
     String shipmentId,
     String trackingId,
     String shippingGuideS3Key,
-    String carrier
-) {}
+    String carrier,
+    String estimatedDeliveryAt) {}

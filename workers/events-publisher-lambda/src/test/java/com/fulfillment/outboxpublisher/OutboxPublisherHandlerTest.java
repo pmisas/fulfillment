@@ -16,13 +16,13 @@ import org.junit.jupiter.api.Test;
 
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 class OutboxPublisherHandlerTest {
 
     private DynamoDbClient dynamo;
-    private SqsClient sqs;
+    private SnsClient sns;
     private Context context;
     private LambdaLogger logger;
     private OutboxPublisherHandler handler;
@@ -30,7 +30,7 @@ class OutboxPublisherHandlerTest {
     @BeforeEach
     void setUp() {
         dynamo  = mock(DynamoDbClient.class);
-        sqs     = mock(SqsClient.class);
+        sns     = mock(SnsClient.class);
         context = mock(Context.class);
         logger  = mock(LambdaLogger.class);
 
@@ -39,10 +39,10 @@ class OutboxPublisherHandlerTest {
         handler = new OutboxPublisherHandler(
             "OutboxEvents",
             "ByPublishStatus",
-            "https://sqs.us-east-1.amazonaws.com/123456/OrderEventsQueue",
+            "arn:aws:sns:us-east-1:123456:OrderEventsTopic",
             25,
             dynamo,
-            sqs
+            sns
         );
     }
 
@@ -64,7 +64,7 @@ class OutboxPublisherHandlerTest {
         assertEquals(0, result.get("skipped"));
         assertEquals(0, result.get("failed"));
 
-        verify(sqs).sendMessage(any(SendMessageRequest.class));
+        verify(sns).publish(any(PublishRequest.class));
         verify(dynamo).updateItem(any(UpdateItemRequest.class));
     }
 
@@ -82,7 +82,7 @@ class OutboxPublisherHandlerTest {
         assertEquals(0, result.get("published"));
         assertEquals(0, result.get("failed"));
 
-        verify(sqs, never()).sendMessage(any(SendMessageRequest.class));
+        verify(sns, never()).publish(any(PublishRequest.class));
         verify(dynamo, never()).updateItem(any(UpdateItemRequest.class));
     }
 
@@ -95,8 +95,8 @@ class OutboxPublisherHandlerTest {
             .build();
 
         when(dynamo.query(any(QueryRequest.class))).thenReturn(queryResponse);
-        when(sqs.sendMessage(any(SendMessageRequest.class)))
-            .thenThrow(new RuntimeException("SQS unavailable"));
+        when(sns.publish(any(PublishRequest.class)))
+            .thenThrow(new RuntimeException("SNS unavailable"));
         when(dynamo.updateItem(any(UpdateItemRequest.class))).thenReturn(UpdateItemResponse.builder().build());
 
         Map<String, Object> result = handler.handleRequest(Map.of(), context);
@@ -127,7 +127,7 @@ class OutboxPublisherHandlerTest {
         assertEquals(1, result.get("skipped")); 
         assertEquals(0, result.get("failed"));
 
-        verify(sqs).sendMessage(any(SendMessageRequest.class));
+        verify(sns).publish(any(PublishRequest.class));
     }
 
     @Test
@@ -150,7 +150,7 @@ class OutboxPublisherHandlerTest {
         assertEquals(1, result.get("skipped"));
         assertEquals(0, result.get("failed"));
 
-        verify(sqs, never()).sendMessage(any(SendMessageRequest.class));
+        verify(sns, never()).publish(any(PublishRequest.class));
         verify(dynamo, never()).updateItem(any(UpdateItemRequest.class));
     }
 

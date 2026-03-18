@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.*;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.*;
 
 import java.time.Instant;
 import java.util.*;
@@ -15,36 +15,36 @@ import java.util.*;
 public class OutboxPublisherHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
     private final String tableName;
     private final String gsiName;
-    private final String queueUrl;
+    private final String topicArn;
     private final int maxBatch;
 
     private final DynamoDbClient dynamo;
-    private final SqsClient sqs;
+    private final SnsClient sns;
 
     public OutboxPublisherHandler() {
         this.tableName = env("OUTBOX_TABLE", "OutboxEvents");
         this.gsiName   = env("OUTBOX_GSI", "ByPublishStatus");
-        this.queueUrl  = env("SQS_QUEUE_URL", null);
+        this.topicArn  = env("SNS_TOPIC_ARN", null);
         this.maxBatch  = Integer.parseInt(env("MAX_BATCH", "25"));
         String regionStr = env("AWS_REGION", "us-east-1");
 
-        if (this.queueUrl == null || this.queueUrl.isBlank()) {
-            throw new IllegalStateException("Missing env var SQS_QUEUE_URL");
+        if (this.topicArn == null || this.topicArn.isBlank()) {
+            throw new IllegalStateException("Missing env var SNS_TOPIC_ARN");
         }
 
         Region region = Region.of(regionStr);
         this.dynamo = DynamoDbClient.builder().region(region).build();
-        this.sqs = SqsClient.builder().region(region).build();
+        this.sns = SnsClient.builder().region(region).build();
     }
 
-    OutboxPublisherHandler(String tableName, String gsiName, String queueUrl, int maxBatch,
-                           DynamoDbClient dynamo, SqsClient sqs) {
+    OutboxPublisherHandler(String tableName, String gsiName, String topicArn, int maxBatch,
+                           DynamoDbClient dynamo, SnsClient sns) {
         this.tableName = tableName;
         this.gsiName   = gsiName;
-        this.queueUrl  = queueUrl;
+        this.topicArn  = topicArn;
         this.maxBatch  = maxBatch;
         this.dynamo    = dynamo;
-        this.sqs       = sqs;
+        this.sns       = sns;
     }
 
     @Override
@@ -73,7 +73,7 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
             }
 
             try {
-                sendToSqs(eventId, eventType, aggregateId, payload);
+                sendToSns(eventId, eventType, aggregateId, payload);
 
                 boolean updated = markAsSent(eventId);
 
@@ -119,26 +119,24 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
         return resp.items() == null ? List.of() : resp.items();
     }
 
-    private void sendToSqs(String eventId, String eventType, String aggregateId, String payload) {
-        Map<String, MessageAttributeValue> attrs = new HashMap<>();
+    private void sendToSns(String eventId, String eventType, String aggregateId, String payload) {
+        Map<String, software.amazon.awssdk.services.sns.model.MessageAttributeValue> attrs = new HashMap<>();
         if (eventType != null) {
-            attrs.put("eventType", MessageAttributeValue.builder()
+            attrs.put("eventType", software.amazon.awssdk.services.sns.model.MessageAttributeValue.builder()
                     .dataType("String").stringValue(eventType).build());
         }
         if (aggregateId != null) {
-            attrs.put("aggregateId", MessageAttributeValue.builder()
+            attrs.put("aggregateId", software.amazon.awssdk.services.sns.model.MessageAttributeValue.builder()
                     .dataType("String").stringValue(aggregateId).build());
         }
-        attrs.put("eventId", MessageAttributeValue.builder()
+        attrs.put("eventId", software.amazon.awssdk.services.sns.model.MessageAttributeValue.builder()
                 .dataType("String").stringValue(eventId).build());
 
-        SendMessageRequest req = SendMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .messageBody(payload)
+        sns.publish(PublishRequest.builder()
+                .topicArn(topicArn)
+                .message(payload)
                 .messageAttributes(attrs)
-                .build();
-
-        sqs.sendMessage(req);
+                .build());
     }
 
     private boolean markAsSent(String eventId) {
