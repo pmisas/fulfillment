@@ -51,7 +51,7 @@ class OrderPickingHandlerTest {
         );
 
         when(orderRepo.findById("order-1")).thenReturn(Mono.just(order));
-        when(orderRepo.save(any())).thenReturn(Mono.just(order.withWarehouse("wh-1").withStatus(Status.PICKED)));
+        when(orderRepo.saveIfStatusIs(any(), eq(Status.VALIDATED))).thenReturn(Mono.just(true));
         when(historyRepo.append(any())).thenReturn(Mono.empty());
 
         String payload = """
@@ -60,7 +60,7 @@ class OrderPickingHandlerTest {
 
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
-        verify(orderRepo).save(any());
+        verify(orderRepo).saveIfStatusIs(any(), eq(Status.VALIDATED));
         verify(historyRepo).append(any());
     }
 
@@ -86,7 +86,7 @@ class OrderPickingHandlerTest {
 
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
-        verify(orderRepo, never()).save(any());
+        verify(orderRepo, never()).saveIfStatusIs(any(), any());
         verify(historyRepo, never()).append(any());
     }
 
@@ -112,7 +112,7 @@ class OrderPickingHandlerTest {
 
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
-        verify(orderRepo, never()).save(any());
+        verify(orderRepo, never()).saveIfStatusIs(any(), any());
         verify(historyRepo, never()).append(any());
     }
 }

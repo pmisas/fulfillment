@@ -51,7 +51,7 @@ class OrderShippedHandlerTest {
         );
 
         when(orderRepo.findById("order-1")).thenReturn(Mono.just(packed));
-        when(orderRepo.save(any())).thenReturn(Mono.just(packed.withStatus(Status.SHIPPED)));
+        when(orderRepo.saveIfStatusIs(any(), eq(Status.PACKED))).thenReturn(Mono.just(true));
         when(historyRepo.append(any())).thenReturn(Mono.empty());
 
         String payload = """
@@ -60,7 +60,7 @@ class OrderShippedHandlerTest {
 
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
-        verify(orderRepo).save(any());
+        verify(orderRepo).saveIfStatusIs(any(), eq(Status.PACKED));
         verify(historyRepo).append(any());
     }
 
@@ -86,7 +86,7 @@ class OrderShippedHandlerTest {
 
         assertDoesNotThrow(() -> handler.handle(payload).block());
 
-        verify(orderRepo, never()).save(any());
+        verify(orderRepo, never()).saveIfStatusIs(any(), any());
         verify(historyRepo, never()).append(any());
     }
 }
