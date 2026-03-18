@@ -10,6 +10,7 @@ public enum Status {
     PICKED,
     PACKED,
     SHIPPED,
+    DELIVERED,
     CANCELED;
 
     private static final Map<Status, Set<Status>> ALLOWED = Map.of(
@@ -17,7 +18,8 @@ public enum Status {
         VALIDATED, Set.of(PICKED, CANCELED),
         PICKED, Set.of(PACKED, CANCELED),
         PACKED, Set.of(SHIPPED),
-        SHIPPED, Set.of(),
+        SHIPPED, Set.of(DELIVERED),
+        DELIVERED, Set.of(),
         REJECTED, Set.of(),
         CANCELED, Set.of()
     );
