@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.orderservice.application.OrderService;
 import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.model.Order;
+import com.fulfillment.orderservice.domain.model.Status;
 import com.fulfillment.orderservice.infrastructure.rest.dto.AsyncOperationResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.CreateOrderRequest;
 import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
@@ -29,6 +30,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 
 
@@ -120,6 +124,84 @@ public class OrderController {
         orderService.cancel(id, auth.getName(), isAdmin(auth));
         
         return AsyncOperationResponse.cancellationRequested(id);
+    }
+
+    @Operation(summary = "Listar órdenes", description = "ADMIN ve todas las órdenes. OPERATOR ve solo las suyas. Soporta filtros opcionales por estado o warehouse, pero no ambos a la vez.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de órdenes",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Filtros inválidos o incompatibles",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping("/mine")
+    @ResponseStatus(HttpStatus.OK)
+    public List<OrderResponse> getMyOrders(
+            @RequestParam(required = false) Status status,
+            @RequestParam(required = false) String warehouseId,
+            Authentication auth) {
+        if (status != null && warehouseId != null) {
+            throw new IllegalArgumentException("Cannot filter by both status and warehouseId simultaneously");
+        }
+        String requesterId = auth.getName();
+        boolean admin = isAdmin(auth);
+        List<Order> orders;
+        if (status != null) {
+            orders = orderService.listByStatus(status, requesterId, admin);
+        } else if (warehouseId != null) {
+            orders = orderService.listByWarehouse(warehouseId, requesterId, admin);
+        } else {
+            orders = orderService.listAll(requesterId, admin);
+        }
+        return orders.stream().map(OrderRestMapper::toResponse).toList();
+    }
+
+    @Operation(summary = "Listar órdenes por estado", description = "ADMIN ve todas. OPERATOR ve solo las suyas.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de órdenes",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Estado inválido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping("/by-status/{status}")
+    @ResponseStatus(HttpStatus.OK)
+    public List<OrderResponse> getByStatus(
+            @Parameter(description = "Estado de la orden", required = true, example = "VALIDATED")
+            @PathVariable Status status,
+            Authentication auth) {
+        return orderService.listByStatus(status, auth.getName(), isAdmin(auth))
+                .stream().map(OrderRestMapper::toResponse).toList();
+    }
+
+    @Operation(summary = "Listar órdenes por warehouse", description = "ADMIN ve todas. OPERATOR ve solo las suyas.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de órdenes",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class)))
+    })
+    @GetMapping("/by-warehouse/{warehouseId}")
+    @ResponseStatus(HttpStatus.OK)
+    public List<OrderResponse> getByWarehouse(
+            @Parameter(description = "ID del warehouse", required = true, example = "wh-1")
+            @PathVariable String warehouseId,
+            Authentication auth) {
+        return orderService.listByWarehouse(warehouseId, auth.getName(), isAdmin(auth))
+                .stream().map(OrderRestMapper::toResponse).toList();
+    }
+
+    @Operation(summary = "Listar órdenes por operador", description = "Solo ADMIN.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de órdenes",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping("/by-operator/{operatorId}")
+    @ResponseStatus(HttpStatus.OK)
+    public List<OrderResponse> getByOperator(
+            @Parameter(description = "ID del operador", required = true, example = "user-sub-123")
+            @PathVariable String operatorId,
+            Authentication auth) {
+        return orderService.listByOperator(operatorId, auth.getName(), isAdmin(auth))
+                .stream().map(OrderRestMapper::toResponse).toList();
     }
 
     private boolean isAdmin(Authentication auth) {

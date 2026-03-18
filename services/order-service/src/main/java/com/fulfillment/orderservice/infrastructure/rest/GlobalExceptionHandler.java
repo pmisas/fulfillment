@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
+import com.fulfillment.orderservice.domain.exception.OrderAccessDeniedException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.exception.OrderNotOwnedException;
@@ -17,6 +18,8 @@ import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
 
 import jakarta.servlet.http.HttpServletRequest;
+
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +44,15 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.FORBIDDEN;
         ApiErrorResponse body = new ApiErrorResponse(
                 status.value(), "ORDER_ACCESS_DENIED", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(OrderAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderAccessDenied(
+            OrderAccessDeniedException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "ACCESS_DENIED", ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 
@@ -89,6 +101,16 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.BAD_REQUEST;
         ApiErrorResponse body = new ApiErrorResponse(
                 status.value(), "BAD_REQUEST", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        String message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "'";
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "INVALID_PARAMETER", message, null);
         return ResponseEntity.status(status).body(body);
     }
 

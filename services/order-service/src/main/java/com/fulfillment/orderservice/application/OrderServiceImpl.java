@@ -13,6 +13,7 @@ import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.application.dto.OrderReceivedEventPayload;
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
+import com.fulfillment.orderservice.domain.exception.OrderAccessDeniedException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.exception.OrderNotOwnedException;
@@ -194,6 +195,38 @@ public class OrderServiceImpl implements OrderService {
         if (!isAdmin && !Objects.equals(order.getOperatorId(), requesterId)) {
             throw new OrderNotOwnedException(order.getOrderId());
         }
+    }
+
+    @Override
+    public List<Order> listAll(String requesterId, boolean isAdmin) {
+        if (isAdmin) {
+            return orderRepo.findAll();
+        }
+        return orderRepo.findByOperatorId(requesterId);
+    }
+
+    @Override
+    public List<Order> listByStatus(Status status, String requesterId, boolean isAdmin) {
+        if (isAdmin) {
+            return orderRepo.findByStatus(status);
+        }
+        return orderRepo.findByOperatorIdAndStatus(requesterId, status);
+    }
+
+    @Override
+    public List<Order> listByWarehouse(String warehouseId, String requesterId, boolean isAdmin) {
+        if (isAdmin) {
+            return orderRepo.findByWarehouseId(warehouseId);
+        }
+        return orderRepo.findByOperatorIdAndWarehouseId(requesterId, warehouseId);
+    }
+
+    @Override
+    public List<Order> listByOperator(String operatorId, String requesterId, boolean isAdmin) {
+        if (!isAdmin) {
+            throw new OrderAccessDeniedException("Only admins can list orders by operator");
+        }
+        return orderRepo.findByOperatorId(operatorId);
     }
 
     private String buildOrderReceivedPayload(Order order) {
