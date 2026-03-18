@@ -76,9 +76,16 @@ public class OrderPickingHandler implements OrderEventHandler {
 
         Order next = withWh.withStatus(Status.PICKED);
 
-        return orderRepo.save(next)
-            .then(historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.VALIDATED, Status.PICKED)))
-            .doOnSuccess(v -> log.info("Order {} -> PICKED (warehouse={})", order.getOrderId(), warehouseId));
+        return orderRepo.saveIfStatusIs(next, Status.VALIDATED)
+            .flatMap(saved -> {
+                if (!saved) {
+                    log.info("Order {} already advanced past VALIDATED (concurrent message), skipping PICKED transition",
+                        order.getOrderId());
+                    return Mono.<Void>empty();
+                }
+                return historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.VALIDATED, Status.PICKED))
+                    .doOnSuccess(v -> log.info("Order {} -> PICKED (warehouse={})", order.getOrderId(), warehouseId));
+            });
     }
 
     private WarehouseOrderActionEvent parse(String json) {

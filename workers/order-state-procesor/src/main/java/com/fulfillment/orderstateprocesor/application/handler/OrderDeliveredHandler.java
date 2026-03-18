@@ -65,9 +65,16 @@ public class OrderDeliveredHandler implements OrderEventHandler {
 
         Order next = order.withStatus(Status.DELIVERED);
 
-        return orderRepo.save(next)
-            .then(historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.SHIPPED, Status.DELIVERED)))
-            .doOnSuccess(v -> log.info("Order {} -> DELIVERED (shipmentId={})", order.getOrderId(), shipmentId));
+        return orderRepo.saveIfStatusIs(next, Status.SHIPPED)
+            .flatMap(saved -> {
+                if (!saved) {
+                    log.info("Order {} already advanced past SHIPPED (concurrent message), skipping DELIVERED transition",
+                        order.getOrderId());
+                    return Mono.<Void>empty();
+                }
+                return historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.SHIPPED, Status.DELIVERED))
+                    .doOnSuccess(v -> log.info("Order {} -> DELIVERED (shipmentId={})", order.getOrderId(), shipmentId));
+            });
     }
 
     private ShipmentDeliveredEvent parse(String json) {
