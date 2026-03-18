@@ -41,7 +41,7 @@ class StatusTest {
 
     @Test
     void terminalStates_shouldNotAllowFurtherTransitions() {
-        for (Status status : new Status[]{Status.SHIPPED, Status.REJECTED, Status.CANCELED}) {
+        for (Status status : new Status[]{Status.DELIVERED, Status.REJECTED, Status.CANCELED}) {
             for (Status target : Status.values()) {
                 assertFalse(status.canTransitionTo(target));
             }

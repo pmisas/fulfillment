@@ -172,23 +172,23 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         
-        String eventType = "OrderCancelled";
-        String eventId = "OrderCancelled:" + orderId + ":" + eventType;
-    
+        String eventType = "OrderCancellationRequested";
+        String eventId = "OrderCancellationRequested:" + orderId;
+
         OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
             eventId,
             "ORDER",
             orderId,
             eventType,
-            buildOrderCancelledPayload(current, "USER_REQUEST")
+            buildOrderCancellationRequestedPayload(current, "USER_REQUEST")
         );
-    
-        log.info("Publishing OrderCancelled event (worker will cancel and release inventory): orderId={}, eventId={}", 
+
+        log.info("Publishing OrderCancellationRequested event (worker will cancel and release inventory): orderId={}, eventId={}",
                  orderId, eventId);
-    
+
         outboxRepo.savePending(outboxEvent);
-    
-        log.info("OrderCancelled event published successfully: orderId={}", orderId);
+
+        log.info("OrderCancellationRequested event published successfully: orderId={}", orderId);
     }
     
     private void assertOwnership(Order order, String requesterId, boolean isAdmin) {
@@ -245,15 +245,15 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private String buildOrderCancelledPayload(Order order, String reason) {
+    private String buildOrderCancellationRequestedPayload(Order order, String reason) {
         try {
-            var payload = new com.fulfillment.orderservice.application.dto.OrderCancelledEventPayload(
+            var payload = new com.fulfillment.orderservice.application.dto.OrderCancellationRequestedPayload(
                 order.getOrderId(),
                 reason
             );
             return mapper.writeValueAsString(payload);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to serialize OrderCancelled payload: " + e.getMessage(), e);
+            throw new IllegalStateException("Failed to serialize OrderCancellationRequested payload: " + e.getMessage(), e);
         }
     }
     

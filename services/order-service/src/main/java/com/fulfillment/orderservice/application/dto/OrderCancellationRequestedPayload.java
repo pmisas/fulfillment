@@ -1,6 +1,6 @@
 package com.fulfillment.orderservice.application.dto;
 
-public record OrderCancelledEventPayload(
+public record OrderCancellationRequestedPayload(
     String orderId,
     String reason
 ) {}
