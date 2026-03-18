@@ -20,9 +20,9 @@ import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundExceptio
 import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.domain.model.ShipmentItem;
 import com.fulfillment.shippingservice.domain.model.ShipmentStatus;
-import com.fulfillment.shippingservice.domain.ports.OutboxEventsRepository;
 import com.fulfillment.shippingservice.domain.ports.OutboxEventsRepository.OutboxPendingEvent;
 import com.fulfillment.shippingservice.domain.ports.ShipmentRepository;
+import com.fulfillment.shippingservice.domain.ports.ShipmentWriteTransaction;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuidePdfGenerator;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuideStorage;
 
@@ -32,19 +32,19 @@ public class ShippingServiceImpl implements ShippingService {
     private static final Logger log = LoggerFactory.getLogger(ShippingServiceImpl.class);
 
     private final ShipmentRepository shipmentRepository;
-    private final OutboxEventsRepository outboxRepo;
+    private final ShipmentWriteTransaction shipmentWriteTx;
     private final ObjectMapper mapper;
     private final ShippingGuidePdfGenerator pdfGenerator;
     private final ShippingGuideStorage shippingGuideStorage;
 
     public ShippingServiceImpl(
             ShipmentRepository shipmentRepository,
-            OutboxEventsRepository outboxRepo,
+            ShipmentWriteTransaction shipmentWriteTx,
             ObjectMapper mapper,
             ShippingGuidePdfGenerator pdfGenerator,
             ShippingGuideStorage shippingGuideStorage) {
         this.shipmentRepository = shipmentRepository;
-        this.outboxRepo = outboxRepo;
+        this.shipmentWriteTx = shipmentWriteTx;
         this.mapper = mapper;
         this.pdfGenerator = pdfGenerator;
         this.shippingGuideStorage = shippingGuideStorage;
@@ -121,13 +121,18 @@ public class ShippingServiceImpl implements ShippingService {
 
         Shipment candidate = current.withStatus(ShipmentStatus.SHIPPED);
 
-        Shipment saved = shipmentRepository
-                .saveIfStatusMatches(candidate, current.getStatus())
+        OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
+                "ShipmentShipped:" + normalizedShipmentId,
+                "SHIPMENT",
+                normalizedShipmentId,
+                "ShipmentShipped",
+                buildShipmentShippedPayload(candidate));
+
+        Shipment saved = shipmentWriteTx
+                .saveStatusWithOutbox(candidate, current.getStatus(), outboxEvent)
                 .orElseThrow(() -> new InvalidStatusTransitionException(current.getStatus(), ShipmentStatus.SHIPPED));
 
-        log.info("Shipment {} -> SHIPPED (orderId={})", normalizedShipmentId, saved.getOrderId());
-        queueShipmentShippedOutbox(saved);
-
+        log.info("Shipment {} -> SHIPPED atomically (orderId={})", normalizedShipmentId, saved.getOrderId());
         return saved;
     }
 
@@ -144,12 +149,18 @@ public class ShippingServiceImpl implements ShippingService {
 
         Shipment updated = current.withStatus(ShipmentStatus.DELIVERED);
 
-        Shipment saved = shipmentRepository.saveIfStatusMatches(updated, current.getStatus())
+        OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
+                "ShipmentDelivered:" + normalizedShipmentId,
+                "SHIPMENT",
+                normalizedShipmentId,
+                "ShipmentDelivered",
+                buildShipmentDeliveredPayload(updated));
+
+        Shipment saved = shipmentWriteTx
+                .saveStatusWithOutbox(updated, current.getStatus(), outboxEvent)
                 .orElseThrow(() -> new InvalidStatusTransitionException(current.getStatus(), ShipmentStatus.DELIVERED));
 
-        log.info("Shipment {} -> DELIVERED (orderId={})", normalizedShipmentId, saved.getOrderId());
-        queueShipmentDeliveredOutbox(saved);
-
+        log.info("Shipment {} -> DELIVERED atomically (orderId={})", normalizedShipmentId, saved.getOrderId());
         return saved;
     }
 
@@ -163,25 +174,6 @@ public class ShippingServiceImpl implements ShippingService {
         return shippingGuideStorage.getPresignedUrl(shipment.getShippingGuideS3Key(), Duration.ofMinutes(15));
     }
 
-    private void queueShipmentDeliveredOutbox(Shipment saved) {
-        String eventId = "ShipmentDelivered:" + saved.getShipmentId();
-
-        OutboxPendingEvent event = new OutboxPendingEvent(
-                eventId,
-                "SHIPMENT",
-                saved.getShipmentId(),
-                "ShipmentDelivered",
-                buildShipmentDeliveredPayload(saved));
-
-        boolean inserted = outboxRepo.savePendingIfAbsent(event);
-        if (!inserted) {
-            outboxRepo.resetToPendingIfProcessed(eventId);
-        }
-
-        log.info("ShipmentDelivered outbox event queued for shipmentId={} orderId={}",
-                saved.getShipmentId(), saved.getOrderId());
-    }
-
     private String buildShipmentDeliveredPayload(Shipment shipment) {
         try {
             return mapper.writeValueAsString(
@@ -191,25 +183,6 @@ public class ShippingServiceImpl implements ShippingService {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to serialize ShipmentDelivered payload: " + e.getMessage(), e);
         }
-    }
-
-    private void queueShipmentShippedOutbox(Shipment saved) {
-        String eventId = "ShipmentShipped:" + saved.getShipmentId();
-
-        OutboxPendingEvent event = new OutboxPendingEvent(
-                eventId,
-                "SHIPMENT",
-                saved.getShipmentId(),
-                "ShipmentShipped",
-                buildShipmentShippedPayload(saved));
-
-        boolean inserted = outboxRepo.savePendingIfAbsent(event);
-        if (!inserted) {
-            outboxRepo.resetToPendingIfProcessed(eventId);
-        }
-
-        log.info("ShipmentShipped outbox event queued for shipmentId={} orderId={}",
-                saved.getShipmentId(), saved.getOrderId());
     }
 
     private String buildShipmentShippedPayload(Shipment shipment) {

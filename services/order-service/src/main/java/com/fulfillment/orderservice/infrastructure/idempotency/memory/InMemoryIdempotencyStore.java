@@ -43,7 +43,7 @@ public class InMemoryIdempotencyStore implements IdempotencyStore {
         cleanupIfExpired(key);
 
         return store.computeIfPresent(key, (k, old) -> {
-            if (!old.value().equals(expected)) return old;     // no cambia
+            if (!old.value().equals(expected)) return old;
             return new Entry(orderId, exp);
         }).value().equals(orderId);
     }
@@ -54,7 +54,7 @@ public class InMemoryIdempotencyStore implements IdempotencyStore {
 
         cleanupIfExpired(key);
 
-        return store.remove(key, new Entry(expected, 0)) // esto NO funcionará porque Entry incluye expiresAt
+        return store.remove(key, new Entry(expected, 0))
                || store.computeIfPresent(key, (k, old) -> old.value().equals(expected) ? null : old) == null;
     }
 

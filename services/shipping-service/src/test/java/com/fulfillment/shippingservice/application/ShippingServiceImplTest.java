@@ -18,9 +18,9 @@ import com.fulfillment.shippingservice.domain.model.CarrierCode;
 import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.domain.model.ShipmentItem;
 import com.fulfillment.shippingservice.domain.model.ShipmentStatus;
-import com.fulfillment.shippingservice.domain.ports.OutboxEventsRepository;
 import com.fulfillment.shippingservice.domain.ports.OutboxEventsRepository.OutboxPendingEvent;
 import com.fulfillment.shippingservice.domain.ports.ShipmentRepository;
+import com.fulfillment.shippingservice.domain.ports.ShipmentWriteTransaction;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuidePdfGenerator;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuideStorage;
 
@@ -31,7 +31,7 @@ import org.mockito.ArgumentCaptor;
 class ShippingServiceImplTest {
 
     private ShipmentRepository shipmentRepository;
-    private OutboxEventsRepository outboxRepo;
+    private ShipmentWriteTransaction shipmentWriteTx;
     private ShippingGuidePdfGenerator pdfGenerator;
     private ShippingGuideStorage shippingGuideStorage;
 
@@ -40,13 +40,13 @@ class ShippingServiceImplTest {
     @BeforeEach
     void setUp() {
         shipmentRepository = mock(ShipmentRepository.class);
-        outboxRepo = mock(OutboxEventsRepository.class);
+        shipmentWriteTx = mock(ShipmentWriteTransaction.class);
         pdfGenerator = mock(ShippingGuidePdfGenerator.class);
         shippingGuideStorage = mock(ShippingGuideStorage.class);
 
         service = new ShippingServiceImpl(
             shipmentRepository,
-            outboxRepo,
+            shipmentWriteTx,
             new ObjectMapper(),
             pdfGenerator,
             shippingGuideStorage
@@ -233,7 +233,7 @@ class ShippingServiceImplTest {
         Shipment result = service.markAsShipped("ship-1");
 
         assertSame(shipped, result);
-        verify(outboxRepo, never()).savePendingIfAbsent(any());
+        verify(shipmentWriteTx, never()).saveStatusWithOutbox(any(), any(), any());
     }
 
     @Test
@@ -250,16 +250,15 @@ class ShippingServiceImplTest {
         Shipment shipped = pending.withStatus(ShipmentStatus.SHIPPED);
 
         when(shipmentRepository.findById("ship-1")).thenReturn(Optional.of(pending));
-        when(shipmentRepository.saveIfStatusMatches(any(), eq(ShipmentStatus.PENDING)))
+        when(shipmentWriteTx.saveStatusWithOutbox(any(), eq(ShipmentStatus.PENDING), any()))
             .thenReturn(Optional.of(shipped));
-        when(outboxRepo.savePendingIfAbsent(any())).thenReturn(true);
 
         Shipment result = service.markAsShipped("ship-1");
 
         assertEquals(ShipmentStatus.SHIPPED, result.getStatus());
 
         ArgumentCaptor<OutboxPendingEvent> captor = ArgumentCaptor.forClass(OutboxPendingEvent.class);
-        verify(outboxRepo).savePendingIfAbsent(captor.capture());
+        verify(shipmentWriteTx).saveStatusWithOutbox(any(), eq(ShipmentStatus.PENDING), captor.capture());
 
         OutboxPendingEvent event = captor.getValue();
         assertEquals("ShipmentShipped", event.eventType());
@@ -280,7 +279,7 @@ class ShippingServiceImplTest {
         );
 
         when(shipmentRepository.findById("ship-1")).thenReturn(Optional.of(pending));
-        when(shipmentRepository.saveIfStatusMatches(any(), eq(ShipmentStatus.PENDING)))
+        when(shipmentWriteTx.saveStatusWithOutbox(any(), eq(ShipmentStatus.PENDING), any()))
             .thenReturn(Optional.empty());
 
         assertThrows(InvalidStatusTransitionException.class, () -> service.markAsShipped("ship-1"));
@@ -319,7 +318,7 @@ class ShippingServiceImplTest {
         Shipment delivered = shipped.withStatus(ShipmentStatus.DELIVERED);
 
         when(shipmentRepository.findById("ship-1")).thenReturn(Optional.of(shipped));
-        when(shipmentRepository.saveIfStatusMatches(any(), eq(ShipmentStatus.SHIPPED)))
+        when(shipmentWriteTx.saveStatusWithOutbox(any(), eq(ShipmentStatus.SHIPPED), any()))
             .thenReturn(Optional.of(delivered));
 
         Shipment result = service.markAsDelivered("ship-1");
@@ -339,7 +338,7 @@ class ShippingServiceImplTest {
         ).withStatus(ShipmentStatus.SHIPPED);
 
         when(shipmentRepository.findById("ship-1")).thenReturn(Optional.of(shipped));
-        when(shipmentRepository.saveIfStatusMatches(any(), eq(ShipmentStatus.SHIPPED)))
+        when(shipmentWriteTx.saveStatusWithOutbox(any(), eq(ShipmentStatus.SHIPPED), any()))
             .thenReturn(Optional.empty());
 
         assertThrows(InvalidStatusTransitionException.class, () -> service.markAsDelivered("ship-1"));
