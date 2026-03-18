@@ -193,7 +193,10 @@ public class ShippingServiceImpl implements ShippingService {
                             shipment.getShipmentId(),
                             shipment.getTrackingId(),
                             shipment.getShippingGuideS3Key(),
-                            shipment.getCarrier().name()));
+                            shipment.getCarrier().name(),
+                            shipment.getEstimatedDeliveryAt() != null
+                                ? shipment.getEstimatedDeliveryAt().toString()
+                                : null));
         } catch (Exception e) {
             throw new IllegalStateException("Failed to serialize ShipmentShipped payload: " + e.getMessage(), e);
         }
