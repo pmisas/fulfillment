@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
 import com.fulfillment.shippingservice.application.dto.ShipmentShippedPayload;
+import com.fulfillment.shippingservice.application.dto.ShipmentDeliveredPayload;
 import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentGuideNotReadyException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
@@ -143,8 +144,13 @@ public class ShippingServiceImpl implements ShippingService {
 
         Shipment updated = current.withStatus(ShipmentStatus.DELIVERED);
 
-        return shipmentRepository.saveIfStatusMatches(updated, current.getStatus())
+        Shipment saved = shipmentRepository.saveIfStatusMatches(updated, current.getStatus())
                 .orElseThrow(() -> new InvalidStatusTransitionException(current.getStatus(), ShipmentStatus.DELIVERED));
+
+        log.info("Shipment {} -> DELIVERED (orderId={})", normalizedShipmentId, saved.getOrderId());
+        queueShipmentDeliveredOutbox(saved);
+
+        return saved;
     }
 
     @Override
@@ -155,6 +161,36 @@ public class ShippingServiceImpl implements ShippingService {
             throw new ShipmentGuideNotReadyException(normalizedId);
         }
         return shippingGuideStorage.getPresignedUrl(shipment.getShippingGuideS3Key(), Duration.ofMinutes(15));
+    }
+
+    private void queueShipmentDeliveredOutbox(Shipment saved) {
+        String eventId = "ShipmentDelivered:" + saved.getShipmentId();
+
+        OutboxPendingEvent event = new OutboxPendingEvent(
+                eventId,
+                "SHIPMENT",
+                saved.getShipmentId(),
+                "ShipmentDelivered",
+                buildShipmentDeliveredPayload(saved));
+
+        boolean inserted = outboxRepo.savePendingIfAbsent(event);
+        if (!inserted) {
+            outboxRepo.resetToPendingIfProcessed(eventId);
+        }
+
+        log.info("ShipmentDelivered outbox event queued for shipmentId={} orderId={}",
+                saved.getShipmentId(), saved.getOrderId());
+    }
+
+    private String buildShipmentDeliveredPayload(Shipment shipment) {
+        try {
+            return mapper.writeValueAsString(
+                    new ShipmentDeliveredPayload(
+                            shipment.getOrderId(),
+                            shipment.getShipmentId()));
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize ShipmentDelivered payload: " + e.getMessage(), e);
+        }
     }
 
     private void queueShipmentShippedOutbox(Shipment saved) {
