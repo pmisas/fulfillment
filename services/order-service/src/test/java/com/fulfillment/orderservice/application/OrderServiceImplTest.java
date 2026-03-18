@@ -258,8 +258,8 @@ class OrderServiceImplTest {
         OutboxPendingEvent event = captor.getValue();
         assertEquals("ORDER", event.aggregateType());
         assertEquals("order-1", event.aggregateId());
-        assertEquals("OrderCancelled", event.eventType());
-        assertTrue(event.eventId().startsWith("OrderCancelled:order-1:"));
+        assertEquals("OrderCancellationRequested", event.eventType());
+        assertTrue(event.eventId().startsWith("OrderCancellationRequested:order-1"));
         assertTrue(event.payload().contains("\"orderId\":\"order-1\""));
         assertTrue(event.payload().contains("\"reason\":\"USER_REQUEST\""));
     }
@@ -292,7 +292,7 @@ class OrderServiceImplTest {
         verify(outboxRepo).savePending(captor.capture());
 
         OutboxPendingEvent event = captor.getValue();
-        assertEquals("OrderCancelled", event.eventType());
+        assertEquals("OrderCancellationRequested", event.eventType());
         assertEquals("order-1", event.aggregateId());
         assertTrue(event.payload().contains("\"orderId\":\"order-1\""));
         verify(orderRepo, never()).save(any());

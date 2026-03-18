@@ -12,7 +12,7 @@ import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
-import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.OrderCancelledEvent;
+import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.OrderCancellationRequestedEvent;
 
 import reactor.core.publisher.Mono;
 
@@ -42,12 +42,12 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
     @Override
     public String eventType() {
-        return "OrderCancelled";
+        return "OrderCancellationRequested";
     }
 
     @Override
     public Mono<Void> handle(String payload) {
-        OrderCancelledEvent event = parse(payload);
+        OrderCancellationRequestedEvent event = parse(payload);
         String orderId = requireNonBlank(event.orderId(), "orderId");
         String reason = event.reason() == null ? "UNKNOWN" : event.reason();
 
@@ -128,11 +128,11 @@ public class OrderCancelledHandler implements OrderEventHandler {
             });
     }
 
-    private OrderCancelledEvent parse(String json) {
+    private OrderCancellationRequestedEvent parse(String json) {
         try {
-            return mapper.readValue(json, OrderCancelledEvent.class);
+            return mapper.readValue(json, OrderCancellationRequestedEvent.class);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid OrderCancelled payload: " + e.getMessage(), e);
+            throw new IllegalArgumentException("Invalid OrderCancellationRequested payload: " + e.getMessage(), e);
         }
     }
 }
