@@ -14,6 +14,7 @@ class OrderTest {
     void createOrder_shouldCreateOrderWithReceivedStatus() {
         Order order = Order.createOrder(
             "order-1",
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(OrderItem.createOrderItem("SKU-1", 2))
@@ -32,6 +33,7 @@ class OrderTest {
             IllegalArgumentException.class,
             () -> Order.createOrder(
                 " ",
+                "operator-1",
                 4.7110,
                 -74.0721,
                 List.of(OrderItem.createOrderItem("SKU-1", 2))
@@ -45,7 +47,7 @@ class OrderTest {
     void createOrder_shouldThrowWhenItemsAreEmpty() {
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,
-            () -> Order.createOrder("order-1", 4.7110, -74.0721, List.of())
+            () -> Order.createOrder("order-1", "operator-1", 4.7110, -74.0721, List.of())
         );
 
         assertTrue(ex.getMessage().toLowerCase().contains("items"));
@@ -55,6 +57,7 @@ class OrderTest {
     void withStatus_shouldAllowValidTransition() {
         Order order = Order.createOrder(
             "order-1",
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(OrderItem.createOrderItem("SKU-1", 2))
@@ -70,6 +73,7 @@ class OrderTest {
     void withStatus_shouldThrowWhenTransitionIsInvalid() {
         Order order = Order.createOrder(
             "order-1",
+            "operator-1",
             4.7110,
             -74.0721,
             List.of(OrderItem.createOrderItem("SKU-1", 2))

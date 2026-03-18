@@ -48,6 +48,7 @@ class OrderPackedHandlerTest {
     void handle_shouldConsumeReservationCreateShipmentAndTransitionToPacked() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.PICKED,
             4.7110,
@@ -81,6 +82,7 @@ class OrderPackedHandlerTest {
     void handle_shouldIgnoreWhenOrderIsNotPicked() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.VALIDATED,
             4.7110,
@@ -106,6 +108,7 @@ class OrderPackedHandlerTest {
     void handle_shouldIgnoreWhenWarehouseIdDoesNotMatch() {
         Order order = Order.restore(
             "order-1",
+            "operator-1",
             "wh-1",
             Status.PICKED,
             4.7110,

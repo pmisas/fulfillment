@@ -59,6 +59,7 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
     private OrderEntity toEntity(Order order) {
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
+        e.setOperatorId(order.getOperatorId());
         e.setWarehouseId(order.getWarehouseId() == null ? "" : order.getWarehouseId());
 
         e.setStatus(order.getStatus().name());
@@ -97,6 +98,7 @@ public class DynamoDbOrderRepositoryAdapter implements OrderRepository {
 
         return Order.restore(
             e.getOrderId(),
+            e.getOperatorId(),
             warehouse,
             Status.valueOf(e.getStatus()),
             lat,

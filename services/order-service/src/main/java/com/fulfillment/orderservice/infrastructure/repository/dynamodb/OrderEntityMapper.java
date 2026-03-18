@@ -22,6 +22,7 @@ public final class OrderEntityMapper {
     public static OrderEntity toEntity(Order order) {
         OrderEntity e = new OrderEntity();
         e.setOrderId(order.getOrderId());
+        e.setOperatorId(order.getOperatorId());
         e.setWarehouseId(order.getWarehouseId());
         e.setStatus(order.getStatus().name());
         e.setCreatedAt(order.getCreatedAt());
@@ -39,6 +40,7 @@ public final class OrderEntityMapper {
 
         return Order.restore(
                 e.getOrderId(),
+                e.getOperatorId(),
                 e.getWarehouseId(),
                 Status.valueOf(e.getStatus()),
                 e.getCreatedAt(),

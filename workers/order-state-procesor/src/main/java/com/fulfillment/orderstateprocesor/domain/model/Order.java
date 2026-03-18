@@ -14,6 +14,7 @@ import lombok.Getter;
 public class Order {
 
     private final String orderId;
+    private final String operatorId;
     private final String warehouseId;
     private final Status status;
     private final double lat;
@@ -25,6 +26,7 @@ public class Order {
 
        private Order(
         String orderId,
+        String operatorId,
         String warehouseId,
         Status status,
         double lat,
@@ -34,6 +36,7 @@ public class Order {
         List<OrderItem> items
     ) {
         this.orderId = requireNonBlank(orderId, "orderId");
+        this.operatorId = requireNonBlank(operatorId, "operatorId");
 
         this.warehouseId = (warehouseId == null || warehouseId.isBlank())
                 ? null
@@ -52,12 +55,14 @@ public class Order {
 
     public static Order createOrder(
                 String orderId,
+                String operatorId,
                 double lat,
                 double lng,
                 List<OrderItem> items) {
     Instant now = Instant.now();
     return new Order(
             orderId,
+            operatorId,
             null,
             Status.RECEIVED,
             lat,
@@ -74,6 +79,7 @@ public class Order {
         }
         return new Order(
             this.orderId,
+            this.operatorId,
             this.warehouseId,
             Objects.requireNonNull(newStatus),
             this.lat,
@@ -86,6 +92,7 @@ public class Order {
      public Order withWarehouse(String warehouseId) {
         return new Order(
             this.orderId,
+            this.operatorId,
             warehouseId,
             this.status,
             this.lat,
@@ -98,6 +105,7 @@ public class Order {
     
     public static Order restore(
             String orderId,
+            String operatorId,
             String warehouseId,
             Status status,
             double lat,
@@ -106,7 +114,7 @@ public class Order {
             Instant updatedAt,
             List<OrderItem> items) {
         return new Order(
-            orderId, warehouseId, status, lat, lng, createdAt, updatedAt, items);
+            orderId, operatorId, warehouseId, status, lat, lng, createdAt, updatedAt, items);
     }
 
 }

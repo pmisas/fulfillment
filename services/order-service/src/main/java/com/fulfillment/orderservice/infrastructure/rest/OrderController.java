@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -66,9 +67,10 @@ public class OrderController {
                 example = "order-req-12345"
                 )
                 @RequestHeader(value = "Idempotency-Key") 
-                String idempotencyKey) {
+                String idempotencyKey,
+                Authentication auth) {
 
-        CreateOrderCommand command = OrderRestMapper.toCommand(req);
+        CreateOrderCommand command = OrderRestMapper.toCommand(req, auth.getName());
         Order order = orderService.create(command, idempotencyKey);
         
         return OrderRestMapper.toResponse(order);
@@ -88,8 +90,9 @@ public class OrderController {
     @ResponseStatus(HttpStatus.OK)
     public OrderResponse getOrderById(
             @Parameter(description = "ID de la orden", required = true, example = "8d91c9aa-1234-4567-890a-abcdef123456")
-            @PathVariable("id")String id) {
-        Order order = orderService.getById(id);
+            @PathVariable("id")String id,
+            Authentication auth) {
+        Order order = orderService.getById(id, auth.getName(), isAdmin(auth));
         return OrderRestMapper.toResponse(order);
     }
     
@@ -111,11 +114,17 @@ public class OrderController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public AsyncOperationResponse cancelOrder(
             @Parameter(description = "ID de la orden", required = true, example = "8d91c9aa-1234-4567-890a-abcdef123456")
-            @PathVariable("id") String id) {
+            @PathVariable("id") String id,
+            Authentication auth) {
     
-        orderService.cancel(id);
+        orderService.cancel(id, auth.getName(), isAdmin(auth));
         
         return AsyncOperationResponse.cancellationRequested(id);
+    }
+
+    private boolean isAdmin(Authentication auth) {
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
 }
