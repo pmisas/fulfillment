@@ -18,7 +18,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
-import software.amazon.awssdk.services.sqs.model.*;
+import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
+import software.amazon.awssdk.services.sqs.model.Message;
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
 @Component
 public class SqsMessageListener {
@@ -67,6 +69,7 @@ public class SqsMessageListener {
                 .doBeforeRetry(signal ->
                     log.warn("SQS poll error, retrying: {}", signal.failure().getMessage())))
             .subscribe();
+
         log.info("Reactive SQS listener started for queue: {}", queueUrl);
     }
 
@@ -96,7 +99,25 @@ public class SqsMessageListener {
 
     private Mono<Void> processAndDelete(Message msg) {
         return Mono.defer(() -> {
+                log.info("Processing SQS messageId={} attributes={} body={}",
+                    msg.messageId(),
+                    msg.messageAttributes(),
+                    msg.body());
+
                 ProcessEventCommand cmd = mapper.toCommand(msg);
+
+                log.info("Mapped command messageId={} eventId={} eventType={} payload={}",
+                    msg.messageId(),
+                    cmd.eventId(),
+                    cmd.eventType(),
+                    cmd.payload());
+
+                if (cmd.eventType() == null || cmd.eventType().isBlank() || "UNKNOWN".equals(cmd.eventType())) {
+                    return Mono.error(new IllegalArgumentException(
+                        "Could not determine eventType for messageId=" + msg.messageId()
+                    ));
+                }
+
                 return processor.process(cmd);
             })
             .then(deleteMessage(msg))
@@ -111,6 +132,7 @@ public class SqsMessageListener {
             .queueUrl(queueUrl)
             .receiptHandle(msg.receiptHandle())
             .build();
+
         return Mono.fromFuture(() -> sqsAsync.deleteMessage(del)).then();
     }
 }
