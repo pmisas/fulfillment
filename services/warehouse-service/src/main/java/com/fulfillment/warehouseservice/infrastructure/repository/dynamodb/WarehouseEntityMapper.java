@@ -3,9 +3,11 @@ package com.fulfillment.warehouseservice.infrastructure.repository.dynamodb;
 import java.time.Duration;
 import java.time.Instant;
 
+import com.fulfillment.warehouseservice.domain.model.WarehouseAccess;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.OutboxEventsRepository.OutboxPendingEvent;
 import com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.outbox.OutboxEventEntity;
+import com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.warehouseaccess.WarehouseAccessEntity;
 import com.fulfillment.warehouseservice.infrastructure.repository.dynamodb.warehouse.WarehouseEntity;
 
 public final class WarehouseEntityMapper {
@@ -32,6 +34,28 @@ public final class WarehouseEntityMapper {
             e.getLat(),
             e.getLng(),
             e.getCreatedAt()
+        );
+    }
+
+    public static WarehouseAccessEntity toEntity(WarehouseAccess access) {
+        WarehouseAccessEntity entity = new WarehouseAccessEntity();
+        entity.setUserId(access.getUserId());
+        entity.setWarehouseId(access.getWarehouseId());
+        entity.setActive(access.isActive());
+        entity.setAssignedAt(access.getAssignedAt());
+        entity.setAssignedBy(access.getAssignedBy());
+        entity.setUpdatedAt(access.getUpdatedAt());
+        return entity;
+    }
+
+    public static WarehouseAccess toDomain(WarehouseAccessEntity entity) {
+        return WarehouseAccess.restore(
+            entity.getUserId(),
+            entity.getWarehouseId(),
+            entity.isActive(),
+            entity.getAssignedAt(),
+            entity.getAssignedBy(),
+            entity.getUpdatedAt()
         );
     }
 

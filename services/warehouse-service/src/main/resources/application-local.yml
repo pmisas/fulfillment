@@ -6,6 +6,7 @@ aws:
   dynamodb:
     endpoint: "http://localhost:8000"
     warehouses-table: Warehouses
+    warehouse-access-table: WarehouseAccess
 
 springdoc:
   api-docs:

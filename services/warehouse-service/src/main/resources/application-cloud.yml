@@ -5,7 +5,10 @@ aws:
   region: ${AWS_REGION}
   dynamodb:
     warehouses-table: ${WAREHOUSE_TABLE_NAME}
+    warehouse-access-table: ${WAREHOUSE_ACCESS_TABLE_NAME}
     outbox-table: ${OUTBOX_TABLE_NAME}
+  cognito:
+    user-pool-id: ${COGNITO_USER_POOL_ID}
 
 spring:
   security:

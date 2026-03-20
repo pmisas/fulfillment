@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,13 +14,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fulfillment.warehouseservice.application.WarehouseAccessAuthorizationService;
+import com.fulfillment.warehouseservice.application.WarehouseAccessService;
 import com.fulfillment.warehouseservice.application.WarehouseService;
+import com.fulfillment.warehouseservice.application.dto.AssignWarehouseManagerCommand;
 import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
 import com.fulfillment.warehouseservice.application.dto.WarehouseStartFlowCommand;
+import com.fulfillment.warehouseservice.domain.model.WarehouseAccess;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.AssignWarehouseManagerRequest;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.CreateWarehouseRequest;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.UserWarehouseAccessResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseManagersResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,9 +48,16 @@ import jakarta.validation.Valid;
 public class WarehouseController {
     
     private final WarehouseService warehouseService;
+    private final WarehouseAccessService warehouseAccessService;
+    private final WarehouseAccessAuthorizationService warehouseAccessAuthorizationService;
 
-    public WarehouseController(WarehouseService warehouseService) {
+    public WarehouseController(
+            WarehouseService warehouseService,
+            WarehouseAccessService warehouseAccessService,
+            WarehouseAccessAuthorizationService warehouseAccessAuthorizationService) {
         this.warehouseService = warehouseService;
+        this.warehouseAccessService = warehouseAccessService;
+        this.warehouseAccessAuthorizationService = warehouseAccessAuthorizationService;
     }
 
     @Operation(summary = "Crear bodega", description = "Crea una nueva bodega. Requiere rol ADMIN.")
@@ -75,7 +91,9 @@ public class WarehouseController {
     @ResponseStatus(HttpStatus.OK)
     public WarehouseResponse getWarehouseById(
             @Parameter(description = "ID de la bodega", required = true, example = "warehouse-001")
-            @PathVariable("id") String id) {
+            @PathVariable("id") String id,
+            Authentication authentication) {
+        warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, id);
         Warehouse warehouse = warehouseService.getById(id);
         return WarehouseRestMapper.toResponse(warehouse);
     }
@@ -109,8 +127,10 @@ public class WarehouseController {
                 @Parameter(description = "ID de la bodega", required = true, example = "warehouse-001")
                 @PathVariable String warehouseId,
                 @Parameter(description = "ID de la orden", required = true, example = "8d91c9aa-1234-4567-890a-abcdef123456")
-                @PathVariable String orderId) {
+                @PathVariable String orderId,
+                Authentication authentication) {
 
+        warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(warehouseId, orderId);
         warehouseService.completePicking(command);
         return ResponseEntity.accepted().build();
@@ -129,11 +149,77 @@ public class WarehouseController {
                 @Parameter(description = "ID de la bodega", required = true, example = "warehouse-001")
                 @PathVariable String warehouseId,
                 @Parameter(description = "ID de la orden", required = true, example = "8d91c9aa-1234-4567-890a-abcdef123456")
-                @PathVariable String orderId) {
+                @PathVariable String orderId,
+                Authentication authentication) {
 
+        warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(warehouseId, orderId);
         warehouseService.completePacking(command);
         return ResponseEntity.accepted().build();
+    }
+
+    @Operation(summary = "Asignar manager a bodega", description = "Asigna o reemplaza la bodega activa de un WAREHOUSE_MANAGER. Requiere rol ADMIN.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Asignacion creada o actualizada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserWarehouseAccessResponse.class))),
+        @ApiResponse(responseCode = "403", description = "No autorizado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Bodega o usuario no encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "La asignacion activa ya existe",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/{warehouseId}/managers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserWarehouseAccessResponse assignManager(
+            @PathVariable String warehouseId,
+            @Valid @RequestBody AssignWarehouseManagerRequest request,
+            Authentication authentication) {
+        String assignedBy = authentication == null ? null : authentication.getName();
+        WarehouseAccess access = warehouseAccessService.assignManager(
+            new AssignWarehouseManagerCommand(warehouseId, request.userId(), assignedBy)
+        );
+        return toAccessResponse(access);
+    }
+
+    @Operation(summary = "Remover manager de bodega", description = "Desactiva la asignacion activa de un manager para una bodega. Requiere rol ADMIN.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Asignacion desactivada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserWarehouseAccessResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Asignacion, usuario o bodega no encontrados",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @DeleteMapping("/{warehouseId}/managers/{userId}")
+    public UserWarehouseAccessResponse removeManager(
+            @PathVariable String warehouseId,
+            @PathVariable String userId) {
+        return toAccessResponse(warehouseAccessService.removeManager(warehouseId, userId));
+    }
+
+    @Operation(summary = "Listar managers de una bodega", description = "Retorna los userId activos asignados a la bodega. Requiere rol ADMIN.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Managers encontrados",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = WarehouseManagersResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Bodega no encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping("/{warehouseId}/managers")
+    public WarehouseManagersResponse getManagersByWarehouse(@PathVariable String warehouseId) {
+        return new WarehouseManagersResponse(
+            warehouseId,
+            warehouseAccessService.getManagersByWarehouse(warehouseId)
+        );
+    }
+
+    private UserWarehouseAccessResponse toAccessResponse(WarehouseAccess access) {
+        return new UserWarehouseAccessResponse(
+            access.getUserId(),
+            access.getWarehouseId(),
+            access.isActive(),
+            access.getAssignedAt(),
+            access.getAssignedBy(),
+            access.getUpdatedAt()
+        );
     }
 
 }
