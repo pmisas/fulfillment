@@ -98,7 +98,7 @@ public class WarehouseController {
         return WarehouseRestMapper.toResponse(warehouse);
     }
 
-    @Operation(summary = "Listar todas las bodegas", description = "Retorna todas las bodegas registradas. Requiere rol WAREHOUSE_MANAGER, OPERATOR o ADMIN.")
+    @Operation(summary = "Listar todas las bodegas", description = "Retorna todas las bodegas registradas. Requiere rol ADMIN.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de bodegas",
             content = @Content(mediaType = "application/json",
