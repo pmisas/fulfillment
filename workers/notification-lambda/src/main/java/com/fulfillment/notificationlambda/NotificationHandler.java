@@ -5,14 +5,13 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.notificationlambda.application.NotificationDispatcher;
 import com.fulfillment.notificationlambda.infrastructure.config.EnvConfig;
 import com.fulfillment.notificationlambda.infrastructure.email.SesEmailSender;
 import com.fulfillment.notificationlambda.infrastructure.operator.CognitoOperatorEmailLookup;
 import com.fulfillment.notificationlambda.infrastructure.order.DynamoOrderLookup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -23,15 +22,14 @@ import java.util.List;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
-    private static final Logger log = LoggerFactory.getLogger(NotificationHandler.class);
-
     private final NotificationDispatcher dispatcher;
+    private final ObjectMapper mapper;
 
     public NotificationHandler() {
         EnvConfig config = EnvConfig.fromEnvironment();
         Region region = Region.of(config.awsRegion());
 
-        ObjectMapper mapper = new ObjectMapper()
+        this.mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         DynamoDbClient dynamo = DynamoDbClient.builder().region(region).build();
@@ -46,37 +44,98 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
         );
     }
 
-    NotificationHandler(NotificationDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
-    }
-
     @Override
     public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         List<SQSBatchResponse.BatchItemFailure> failures = new ArrayList<>();
 
         for (SQSEvent.SQSMessage message : event.getRecords()) {
             try {
-                String eventType = extractEventType(message);
-                if (eventType == null || eventType.isBlank()) {
-                    log.warn("Message {} has no eventType attribute, skipping", message.getMessageId());
-                    continue;
-                }
-                log.info("Processing message={} eventType={}", message.getMessageId(), eventType);
-                dispatcher.dispatch(eventType, message.getBody());
+                ParsedMessage parsed = parseMessage(message);
+
+                context.getLogger().log(
+                    "Processing messageId=" + message.getMessageId()
+                        + " eventType=" + parsed.eventType()
+                        + " payload=" + parsed.payload() + "\n"
+                );
+
+                dispatcher.dispatch(parsed.eventType(), parsed.payload());
+
             } catch (Exception e) {
-                log.error("Failed to process message {}: {}", message.getMessageId(), e.getMessage(), e);
+                context.getLogger().log(
+                    "Failed processing messageId=" + message.getMessageId()
+                        + " error=" + e.getMessage() + "\n"
+                );
+
                 failures.add(SQSBatchResponse.BatchItemFailure.builder()
                     .withItemIdentifier(message.getMessageId())
                     .build());
             }
         }
 
-        return SQSBatchResponse.builder().withBatchItemFailures(failures).build();
+        return SQSBatchResponse.builder()
+            .withBatchItemFailures(failures)
+            .build();
     }
 
-    private String extractEventType(SQSEvent.SQSMessage message) {
+    private ParsedMessage parseMessage(SQSEvent.SQSMessage message) throws Exception {
+        String sqsEventType = extractSqsAttribute(message, "eventType");
+        String sqsEventId = extractSqsAttribute(message, "eventId");
+
+        if (sqsEventType != null && !sqsEventType.isBlank()) {
+            return new ParsedMessage(
+                sqsEventId != null ? sqsEventId : message.getMessageId(),
+                sqsEventType,
+                message.getBody()
+            );
+        }
+
+        JsonNode root = mapper.readTree(message.getBody());
+
+        boolean looksLikeSnsEnvelope = root.has("Type") && root.has("Message");
+        if (looksLikeSnsEnvelope) {
+            String eventType = root.path("MessageAttributes")
+                .path("eventType")
+                .path("Value")
+                .asText(null);
+
+            String eventId = root.path("MessageAttributes")
+                .path("eventId")
+                .path("Value")
+                .asText(message.getMessageId());
+
+            String payload = root.path("Message").asText(null);
+
+            if (eventType == null || eventType.isBlank()) {
+                throw new IllegalArgumentException("SNS envelope without eventType");
+            }
+
+            if (payload == null || payload.isBlank()) {
+                throw new IllegalArgumentException("SNS envelope without Message payload");
+            }
+
+            return new ParsedMessage(eventId, eventType, payload);
+        }
+
+        if (root.has("eventType") && root.has("payload")) {
+            String eventType = root.path("eventType").asText(null);
+            String eventId = root.path("eventId").asText(message.getMessageId());
+            String payload = mapper.writeValueAsString(root.path("payload"));
+
+            if (eventType == null || eventType.isBlank()) {
+                throw new IllegalArgumentException("Direct message without eventType");
+            }
+
+            return new ParsedMessage(eventId, eventType, payload);
+        }
+
+        throw new IllegalArgumentException("Unknown message format");
+    }
+
+    private String extractSqsAttribute(SQSEvent.SQSMessage message, String key) {
         if (message.getMessageAttributes() == null) return null;
-        SQSEvent.MessageAttribute attr = message.getMessageAttributes().get("eventType");
+        SQSEvent.MessageAttribute attr = message.getMessageAttributes().get(key);
         return attr != null ? attr.getStringValue() : null;
     }
+
+    private record ParsedMessage(String eventId, String eventType, String payload) {}
 }

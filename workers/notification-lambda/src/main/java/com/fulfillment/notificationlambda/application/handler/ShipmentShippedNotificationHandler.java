@@ -7,22 +7,22 @@ import com.fulfillment.notificationlambda.domain.ports.EmailSender;
 import com.fulfillment.notificationlambda.domain.ports.OperatorEmailLookup;
 import com.fulfillment.notificationlambda.domain.ports.OrderLookup;
 import com.fulfillment.notificationlambda.infrastructure.messaging.dto.ShipmentShippedPayload;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
 public class ShipmentShippedNotificationHandler implements EventNotificationHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(ShipmentShippedNotificationHandler.class);
 
     private final ObjectMapper mapper;
     private final OrderLookup orderLookup;
     private final OperatorEmailLookup emailLookup;
     private final EmailSender emailSender;
 
-    public ShipmentShippedNotificationHandler(ObjectMapper mapper, OrderLookup orderLookup,
-                                              OperatorEmailLookup emailLookup, EmailSender emailSender) {
+    public ShipmentShippedNotificationHandler(
+        ObjectMapper mapper,
+        OrderLookup orderLookup,
+        OperatorEmailLookup emailLookup,
+        EmailSender emailSender
+    ) {
         this.mapper = mapper;
         this.orderLookup = orderLookup;
         this.emailLookup = emailLookup;
@@ -36,61 +36,86 @@ public class ShipmentShippedNotificationHandler implements EventNotificationHand
 
     @Override
     public void handle(String payload) {
+        System.out.println("ShipmentShipped handler payload=" + payload);
+
         ShipmentShippedPayload event = parse(payload);
 
         Optional<OrderInfo> orderOpt = orderLookup.findById(event.orderId());
         if (orderOpt.isEmpty()) {
-            log.warn("Order {} not found, skipping ShipmentShipped notification", event.orderId());
+            System.out.println("Order not found for orderId=" + event.orderId());
             return;
         }
 
         OrderInfo order = orderOpt.get();
+        System.out.println("Order found orderId=" + order.orderId() + " operatorId=" + order.operatorId());
+
         Optional<String> emailOpt = emailLookup.findEmailByOperatorId(order.operatorId());
         if (emailOpt.isEmpty()) {
-            log.warn("Email not found for operator {} (order {}), skipping notification",
-                order.operatorId(), event.orderId());
+            System.out.println("Email not found for operatorId=" + order.operatorId() + " orderId=" + event.orderId());
             return;
         }
 
+        System.out.println("Sending shipment shipped email to=" + emailOpt.get());
+
         emailSender.send(new EmailNotification(
             emailOpt.get(),
-            "Tu orden #" + event.orderId() + " está en camino",
+            "Tu orden #" + event.orderId() + " esta en camino",
             buildText(event),
             buildHtml(event)
         ));
 
-        log.info("ShipmentShipped notification sent for order={}, shipment={}",
-            event.orderId(), event.shipmentId());
+        System.out.println("ShipmentShipped notification sent for orderId=" + event.orderId()
+            + " shipmentId=" + event.shipmentId());
     }
 
     private String buildText(ShipmentShippedPayload e) {
         StringBuilder sb = new StringBuilder();
-        sb.append("¡Tu orden #").append(e.orderId()).append(" está en camino!\n\n");
-        sb.append("ID de envío: ").append(e.shipmentId()).append("\n");
-        sb.append("Número de guía: ").append(e.trackingId()).append("\n");
-        if (e.carrier() != null) sb.append("Transportadora: ").append(e.carrier()).append("\n");
-        if (e.estimatedDeliveryAt() != null)
+        sb.append("Tu orden #").append(e.orderId()).append(" esta en camino.\n\n");
+        sb.append("ID de envio: ").append(e.shipmentId()).append("\n");
+        sb.append("Numero de guia: ").append(e.trackingId()).append("\n");
+        if (e.carrier() != null && !e.carrier().isBlank()) {
+            sb.append("Transportadora: ").append(e.carrier()).append("\n");
+        }
+        if (e.estimatedDeliveryAt() != null && !e.estimatedDeliveryAt().isBlank()) {
             sb.append("Fecha estimada de entrega: ").append(e.estimatedDeliveryAt()).append("\n");
-        sb.append("\nPuedes rastrear tu envío con el número de guía a través de tu transportadora.");
+        }
+        sb.append("\nPuedes rastrear tu envio con el numero de guia.");
         return sb.toString();
     }
 
     private String buildHtml(ShipmentShippedPayload e) {
-        String carrierRow = e.carrier() != null
-            ? "<li><strong>Transportadora:</strong> " + e.carrier() + "</li>" : "";
-        String etaRow = e.estimatedDeliveryAt() != null
-            ? "<li><strong>Fecha estimada de entrega:</strong> " + e.estimatedDeliveryAt() + "</li>" : "";
+        String carrierRow = (e.carrier() != null && !e.carrier().isBlank())
+            ? "<li><strong>Transportadora:</strong> " + escapeHtml(e.carrier()) + "</li>" : "";
+
+        String etaRow = (e.estimatedDeliveryAt() != null && !e.estimatedDeliveryAt().isBlank())
+            ? "<li><strong>Fecha estimada de entrega:</strong> " + escapeHtml(e.estimatedDeliveryAt()) + "</li>" : "";
+
         return """
-            <h2>¡Tu orden está en camino!</h2>
-            <p>Tu orden <strong>#%s</strong> ha sido despachada.</p>
-            <ul>
-              <li><strong>ID de envío:</strong> %s</li>
-              <li><strong>Número de guía:</strong> %s</li>
-              %s
-              %s
-            </ul>
-            <p>Puedes rastrear tu envío usando el número de guía con tu transportadora.</p>
-            """.formatted(e.orderId(), e.shipmentId(), e.trackingId(), carrierRow, etaRow);
+            <html>
+              <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <meta charset="UTF-8">
+                <title>Envio despachado</title>
+              </head>
+              <body style="font-family: Arial, sans-serif; color: #222;">
+                <h2>Tu orden esta en camino</h2>
+                <p>Tu orden <strong>#%s</strong> ha sido despachada.</p>
+                <ul>
+                  <li><strong>ID de envio:</strong> %s</li>
+                  <li><strong>Numero de guia:</strong> %s</li>
+                  %s
+                  %s
+                </ul>
+                <p>Puedes rastrear tu envio usando el numero de guia.</p>
+              </body>
+            </html>
+            """.formatted(
+                escapeHtml(e.orderId()),
+                escapeHtml(e.shipmentId()),
+                escapeHtml(e.trackingId()),
+                carrierRow,
+                etaRow
+            );
     }
 
     private ShipmentShippedPayload parse(String json) {
@@ -99,5 +124,15 @@ public class ShipmentShippedNotificationHandler implements EventNotificationHand
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid ShipmentShipped payload: " + e.getMessage(), e);
         }
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
     }
 }

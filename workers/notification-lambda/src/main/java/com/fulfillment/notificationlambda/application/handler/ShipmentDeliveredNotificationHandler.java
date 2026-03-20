@@ -7,22 +7,22 @@ import com.fulfillment.notificationlambda.domain.ports.EmailSender;
 import com.fulfillment.notificationlambda.domain.ports.OperatorEmailLookup;
 import com.fulfillment.notificationlambda.domain.ports.OrderLookup;
 import com.fulfillment.notificationlambda.infrastructure.messaging.dto.ShipmentDeliveredPayload;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
 public class ShipmentDeliveredNotificationHandler implements EventNotificationHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(ShipmentDeliveredNotificationHandler.class);
 
     private final ObjectMapper mapper;
     private final OrderLookup orderLookup;
     private final OperatorEmailLookup emailLookup;
     private final EmailSender emailSender;
 
-    public ShipmentDeliveredNotificationHandler(ObjectMapper mapper, OrderLookup orderLookup,
-                                                OperatorEmailLookup emailLookup, EmailSender emailSender) {
+    public ShipmentDeliveredNotificationHandler(
+        ObjectMapper mapper,
+        OrderLookup orderLookup,
+        OperatorEmailLookup emailLookup,
+        EmailSender emailSender
+    ) {
         this.mapper = mapper;
         this.orderLookup = orderLookup;
         this.emailLookup = emailLookup;
@@ -36,21 +36,26 @@ public class ShipmentDeliveredNotificationHandler implements EventNotificationHa
 
     @Override
     public void handle(String payload) {
+        System.out.println("ShipmentDelivered handler payload=" + payload);
+
         ShipmentDeliveredPayload event = parse(payload);
 
         Optional<OrderInfo> orderOpt = orderLookup.findById(event.orderId());
         if (orderOpt.isEmpty()) {
-            log.warn("Order {} not found, skipping ShipmentDelivered notification", event.orderId());
+            System.out.println("Order not found for orderId=" + event.orderId());
             return;
         }
 
         OrderInfo order = orderOpt.get();
+        System.out.println("Order found orderId=" + order.orderId() + " operatorId=" + order.operatorId());
+
         Optional<String> emailOpt = emailLookup.findEmailByOperatorId(order.operatorId());
         if (emailOpt.isEmpty()) {
-            log.warn("Email not found for operator {} (order {}), skipping notification",
-                order.operatorId(), event.orderId());
+            System.out.println("Email not found for operatorId=" + order.operatorId() + " orderId=" + event.orderId());
             return;
         }
+
+        System.out.println("Sending shipment delivered email to=" + emailOpt.get());
 
         emailSender.send(new EmailNotification(
             emailOpt.get(),
@@ -59,25 +64,37 @@ public class ShipmentDeliveredNotificationHandler implements EventNotificationHa
             buildHtml(event)
         ));
 
-        log.info("ShipmentDelivered notification sent for order={}, shipment={}",
-            event.orderId(), event.shipmentId());
+        System.out.println("ShipmentDelivered notification sent for orderId=" + event.orderId()
+            + " shipmentId=" + event.shipmentId());
     }
 
     private String buildText(ShipmentDeliveredPayload e) {
-        return "¡Tu orden #" + e.orderId() + " ha sido entregada exitosamente!\n\n"
-            + "ID de envío: " + e.shipmentId() + "\n\n"
+        return "Tu orden #" + e.orderId() + " ha sido entregada exitosamente.\n\n"
+            + "ID de envio: " + e.shipmentId() + "\n\n"
             + "Gracias por confiar en nosotros.";
     }
 
     private String buildHtml(ShipmentDeliveredPayload e) {
         return """
-            <h2>¡Tu orden ha sido entregada!</h2>
-            <p>Tu orden <strong>#%s</strong> ha sido entregada exitosamente.</p>
-            <ul>
-              <li><strong>ID de envío:</strong> %s</li>
-            </ul>
-            <p>Gracias por confiar en nosotros.</p>
-            """.formatted(e.orderId(), e.shipmentId());
+            <html>
+              <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <meta charset="UTF-8">
+                <title>Envio entregado</title>
+              </head>
+              <body style="font-family: Arial, sans-serif; color: #222;">
+                <h2>Tu orden ha sido entregada</h2>
+                <p>Tu orden <strong>#%s</strong> ha sido entregada exitosamente.</p>
+                <ul>
+                  <li><strong>ID de envio:</strong> %s</li>
+                </ul>
+                <p>Gracias por confiar en nosotros.</p>
+              </body>
+            </html>
+            """.formatted(
+                escapeHtml(e.orderId()),
+                escapeHtml(e.shipmentId())
+            );
     }
 
     private ShipmentDeliveredPayload parse(String json) {
@@ -86,5 +103,15 @@ public class ShipmentDeliveredNotificationHandler implements EventNotificationHa
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid ShipmentDelivered payload: " + e.getMessage(), e);
         }
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
     }
 }
