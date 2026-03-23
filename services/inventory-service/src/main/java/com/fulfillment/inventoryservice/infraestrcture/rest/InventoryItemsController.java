@@ -3,10 +3,12 @@ package com.fulfillment.inventoryservice.infraestrcture.rest;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fulfillment.inventoryservice.application.InventoryWarehouseAuthorizationService;
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
 import com.fulfillment.inventoryservice.application.dto.RestockBatchCommand;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse;
@@ -36,9 +38,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class InventoryItemsController {
 
     private final InventoryItemsService inventoryService;
+    private final InventoryWarehouseAuthorizationService inventoryWarehouseAuthorizationService;
 
-    public InventoryItemsController(InventoryItemsService inventoryService) {
+    public InventoryItemsController(
+            InventoryItemsService inventoryService,
+            InventoryWarehouseAuthorizationService inventoryWarehouseAuthorizationService) {
         this.inventoryService = inventoryService;
+        this.inventoryWarehouseAuthorizationService = inventoryWarehouseAuthorizationService;
     }
 
     @Operation(
@@ -61,7 +67,10 @@ public class InventoryItemsController {
     public List<InventoryItemResponse> restockBatch(
             @Parameter(description = "ID de la bodega", required = true, example = "warehouse-001")
             @PathVariable String warehouseId,
-            @Valid @RequestBody BatchRequest req) {
+            @Valid @RequestBody BatchRequest req,
+            Authentication authentication) {
+
+        inventoryWarehouseAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
 
         RestockBatchCommand command = InventoryRestMapper.toRestockBatchCommand(warehouseId, req);
         return inventoryService.restockBatch(command).stream()
@@ -86,7 +95,9 @@ public class InventoryItemsController {
     @ResponseStatus(HttpStatus.OK)
     public List<InventoryItemResponse> getInventoryByWarehouse(
             @Parameter(description = "ID de la bodega", required = true, example = "warehouse-001")
-            @PathVariable String warehouseId) {
+            @PathVariable String warehouseId,
+            Authentication authentication) {
+        inventoryWarehouseAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         return inventoryService.getByWarehouseId(warehouseId).stream()
                 .map(InventoryRestMapper::toResponse)
                 .toList();

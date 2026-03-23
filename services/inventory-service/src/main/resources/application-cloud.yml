@@ -10,6 +10,7 @@ aws:
   dynamodb:
     inventory-table: ${INVENTORY_TABLE_NAME}
     reservation-table: ${RESERVATION_TABLE_NAME}
+    warehouse-access-table: ${WAREHOUSE_ACCESS_TABLE_NAME}
 
 spring:
   security:
