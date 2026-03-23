@@ -33,7 +33,7 @@ public class SecurityConfig {
                                 "/api/v1/shipments/*/deliver")
                         .hasAnyRole("WAREHOUSE_MANAGER", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/shipments/**")
-                        .hasAnyRole("WAREHOUSE_MANAGER", "OPERATOR", "ADMIN")
+                        .hasAnyRole("WAREHOUSE_MANAGER", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
