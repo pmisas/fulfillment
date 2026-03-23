@@ -112,6 +112,7 @@ class InventoryItemsServiceImplTest {
             InventoryItem.restore("wh-1", "SKU-1", 10, 0, Instant.now())
         );
 
+        when(warehouseClient.existsById("wh-1")).thenReturn(true);
         when(repo.findByWarehouseId("wh-1")).thenReturn(items);
 
         List<InventoryItem> result = service.getByWarehouseId("wh-1");

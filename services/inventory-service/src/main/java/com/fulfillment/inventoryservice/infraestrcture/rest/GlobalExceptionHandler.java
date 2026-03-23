@@ -4,12 +4,14 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.fulfillment.inventoryservice.domain.exception.InsufficientAvailableStockException;
 import com.fulfillment.inventoryservice.domain.exception.InsufficientReservedStockException;
+import com.fulfillment.inventoryservice.domain.exception.WarehouseAccessDeniedException;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse.FieldViolation;
@@ -48,6 +50,15 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.NOT_FOUND;
         ApiErrorResponse body = new ApiErrorResponse(
                 status.value(), "WAREHOUSE_NOT_FOUND", ex.getMessage(), null);
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler({WarehouseAccessDeniedException.class, AccessDeniedException.class})
+    public ResponseEntity<ApiErrorResponse> handleForbidden(
+            Exception ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ApiErrorResponse body = new ApiErrorResponse(
+                status.value(), "FORBIDDEN", ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 
