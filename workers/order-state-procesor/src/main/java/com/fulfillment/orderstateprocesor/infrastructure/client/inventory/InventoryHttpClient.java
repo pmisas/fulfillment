@@ -63,12 +63,15 @@ public class InventoryHttpClient implements InventoryClient {
 
         return webClient.post()
             .uri("/internal/v1/reservations/{reservationId}/consume", reservationId)
-            .retrieve()
-            .toBodilessEntity()
-            .map(r -> ConsumeResult.CONSUMED)
-            .onErrorResume(ex -> {
-                log.warn("consumeReservation failed for reservationId={}: {}", reservationId, ex.getMessage());
-                return Mono.just(ConsumeResult.RESERVATION_NOT_FOUND);
+            .exchangeToMono(response -> {
+                int status = response.statusCode().value();
+                if (status == 204 || status == 200) {
+                    return Mono.just(ConsumeResult.CONSUMED);
+                }
+                if (status == 404) {
+                    return Mono.just(ConsumeResult.RESERVATION_NOT_FOUND);
+                }
+                return response.createException().flatMap(Mono::error);
             });
     }
 

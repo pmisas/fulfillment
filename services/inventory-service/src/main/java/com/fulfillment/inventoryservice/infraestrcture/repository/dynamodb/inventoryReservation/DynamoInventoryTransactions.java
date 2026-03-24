@@ -197,7 +197,7 @@ public class DynamoInventoryTransactions
                                     SET quantity = quantity - :qty,
                                         reserved = if_not_exists(reserved, :zero) - :qty
                                     """)
-                            .conditionExpression("quantity >= :qty AND if_not_exists(reserved, :zero) >= :qty")
+                            .conditionExpression("quantity >= :qty AND reserved >= :qty")
                             .expressionAttributeValues(Map.of(
                                     ":qty", AttributeValue.fromN(String.valueOf(item.getQuantity())),
                                     ":zero", AttributeValue.fromN("0")

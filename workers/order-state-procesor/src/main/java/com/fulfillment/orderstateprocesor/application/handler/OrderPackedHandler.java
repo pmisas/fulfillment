@@ -97,7 +97,14 @@ public class OrderPackedHandler implements OrderEventHandler {
                 }
                 return inventoryClient.consumeReservation(reservationId)
                     .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}", reservationId, order.getOrderId(), result))
-                    .then(shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems))
+                    .flatMap(result -> {
+                        if (result != InventoryClient.ConsumeResult.CONSUMED) {
+                            return Mono.error(new IllegalStateException(
+                                "Reservation " + reservationId + " was not consumed for order " + order.getOrderId()
+                            ));
+                        }
+                        return shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems);
+                    })
                     .then(historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED)))
                     .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId));
             });
