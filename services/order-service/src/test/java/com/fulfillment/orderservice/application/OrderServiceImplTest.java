@@ -239,6 +239,22 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void cancel_shouldRejectCancellationWhenOrderIsPacked() {
+        Order packed = mock(Order.class);
+        when(packed.getOperatorId()).thenReturn("operator-1");
+        when(packed.getStatus()).thenReturn(Status.PACKED);
+        when(orderRepo.findById("order-1")).thenReturn(Optional.of(packed));
+
+        InvalidStatusTransitionException exception = assertThrows(
+            InvalidStatusTransitionException.class,
+            () -> service.cancel("order-1", "operator-1", false)
+        );
+
+        assertNotNull(exception);
+        verify(outboxRepo, never()).savePending(any());
+    }
+
+    @Test
     void cancel_shouldDoNothingWhenOrderAlreadyCanceled() {
         Order canceled = mock(Order.class);
         when(canceled.getOperatorId()).thenReturn("operator-1");

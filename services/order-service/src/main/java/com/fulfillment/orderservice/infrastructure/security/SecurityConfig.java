@@ -10,7 +10,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 @org.springframework.context.annotation.Profile("cloud")
 public class SecurityConfig {
+    
     @Bean
+    @SuppressWarnings("unused")
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         
         var converter = new CognitoGroupsConverter();

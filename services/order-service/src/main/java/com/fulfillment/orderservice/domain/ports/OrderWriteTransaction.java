@@ -10,13 +10,6 @@ public interface OrderWriteTransaction {
         OutboxPendingEvent outboxEvent
     );
 
-
-    void updateOrderWithHistoryAndOutbox(
-        Order order, 
-        OrderStateHistory history, 
-        OutboxPendingEvent outboxEvent
-    );
-
     record OutboxPendingEvent(
         String eventId,
         String aggregateType,

@@ -17,7 +17,6 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.TransactUpdateItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 
 @Component
@@ -83,35 +82,4 @@ public class DynamoOrderWriteTransaction implements OrderWriteTransaction {
         enhancedClient.transactWriteItems(tx);
     }
 
-    @Override
-    public void updateOrderWithHistoryAndOutbox(
-        Order newOrder,
-        OrderStateHistory history,
-        OutboxPendingEvent outboxEvent) {
-         
-        TransactUpdateItemEnhancedRequest<OrderEntity> updateOrder =
-            TransactUpdateItemEnhancedRequest.builder(OrderEntity.class)
-                .item(OrderEntityMapper.toEntity(newOrder))
-                .build();
-
-        TransactPutItemEnhancedRequest<OrderStateHistoryEntity> putHistory =
-            TransactPutItemEnhancedRequest.builder(OrderStateHistoryEntity.class)
-                .item(OrderEntityMapper.toEntity(history))
-                .conditionExpression(HISTORY_MUST_NOT_EXIST)
-                .build();
-
-        TransactPutItemEnhancedRequest<OutboxEventEntity> putOutbox =
-            TransactPutItemEnhancedRequest.builder(OutboxEventEntity.class)
-                .item(OrderEntityMapper.toEntity(outboxEvent))
-                .conditionExpression(OUTBOX_MUST_NOT_EXIST)
-                .build();
-
-        TransactWriteItemsEnhancedRequest tx = TransactWriteItemsEnhancedRequest.builder()
-            .addUpdateItem(ordersTable, updateOrder)
-            .addPutItem(historyTable, putHistory)
-            .addPutItem(outboxTable, putOutbox)
-            .build();
-
-        enhancedClient.transactWriteItems(tx);
-    }
 }

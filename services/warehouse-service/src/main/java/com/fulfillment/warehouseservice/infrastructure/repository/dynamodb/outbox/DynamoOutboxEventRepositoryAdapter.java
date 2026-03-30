@@ -19,6 +19,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 @Repository
@@ -62,7 +63,7 @@ public class DynamoOutboxEventRepositoryAdapter implements OutboxEventsRepositor
         } catch (ConditionalCheckFailedException e) {
             log.warn("Outbox event already exists (idempotent): eventId={}, table={}", event.eventId(), tableName);
             return false;
-        } catch (Exception e) {
+        } catch (DynamoDbException e) {
             log.error("Unexpected error saving outbox event: eventId={}, table={}, error={}", 
                       event.eventId(), tableName, e.getMessage(), e);
             throw e;
@@ -100,7 +101,7 @@ public class DynamoOutboxEventRepositoryAdapter implements OutboxEventsRepositor
             log.debug("Event not reset - either doesn't exist or already PENDING: eventId={}, table={}", 
                      eventId, tableName);
             return false;
-        } catch (Exception e) {
+        } catch (DynamoDbException e) {
             log.error("Unexpected error resetting event: eventId={}, table={}, error={}", 
                       eventId, tableName, e.getMessage(), e);
             throw e;

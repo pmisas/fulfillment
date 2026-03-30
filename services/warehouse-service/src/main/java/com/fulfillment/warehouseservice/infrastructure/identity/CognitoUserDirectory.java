@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import com.fulfillment.warehouseservice.domain.port.UserDirectory;
 
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.CognitoIdentityProviderException;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminListGroupsForUserRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.ListUsersRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.UserType;
@@ -64,7 +65,7 @@ public class CognitoUserDirectory implements UserDirectory {
                 .collect(Collectors.toSet());
 
             return Optional.of(new DirectoryUser(userId.trim(), username, roles));
-        } catch (Exception ex) {
+        } catch (CognitoIdentityProviderException ex) {
             log.error("Failed to resolve user {} in Cognito", userId, ex);
             throw new IllegalStateException("Failed to validate user in Cognito", ex);
         }
