@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.infrastructure.rest.dto;
+package com.fulfillment.orderservice.infrastructure.rest.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

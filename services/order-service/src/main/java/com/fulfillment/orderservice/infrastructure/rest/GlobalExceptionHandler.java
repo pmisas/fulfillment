@@ -14,8 +14,8 @@ import com.fulfillment.orderservice.domain.exception.OrderAccessDeniedException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.exception.OrderNotOwnedException;
-import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
+import com.fulfillment.orderservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.orderservice.infrastructure.rest.dto.response.ApiErrorResponse.FieldViolation;
 
 import jakarta.servlet.http.HttpServletRequest;
 

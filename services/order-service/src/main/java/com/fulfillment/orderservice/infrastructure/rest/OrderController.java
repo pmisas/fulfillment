@@ -17,10 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.orderservice.application.OrderService;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.Status;
-import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.orderservice.infrastructure.rest.dto.AsyncOperationResponse;
-import com.fulfillment.orderservice.infrastructure.rest.dto.CreateOrderRequest;
-import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
+import com.fulfillment.orderservice.infrastructure.rest.dto.request.CreateOrderRequest;
+import com.fulfillment.orderservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.orderservice.infrastructure.rest.dto.response.AsyncOperationResponse;
+import com.fulfillment.orderservice.infrastructure.rest.dto.response.OrderResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -82,7 +82,7 @@ public class OrderController {
             idempotencyKey
         );
 
-        return OrderRestMapper.toResponse(order);
+        return toResponse(order);
     }
 
     @Operation(
@@ -106,7 +106,7 @@ public class OrderController {
             @PathVariable("id") String id,
             Authentication auth) {
         Order order = orderService.getById(id, auth.getName(), isAdmin(auth));
-        return OrderRestMapper.toResponse(order);
+        return toResponse(order);
     }
 
     @Operation(
@@ -168,7 +168,7 @@ public class OrderController {
         }
 
         return orders.stream()
-            .map(OrderRestMapper::toResponse)
+            .map(this::toResponse)
             .toList();
     }
 
@@ -189,7 +189,7 @@ public class OrderController {
             Authentication auth) {
         return orderService.listByStatus(status, auth.getName(), isAdmin(auth))
             .stream()
-            .map(OrderRestMapper::toResponse)
+            .map(this::toResponse)
             .toList();
     }
 
@@ -208,7 +208,7 @@ public class OrderController {
             Authentication auth) {
         return orderService.listByWarehouse(warehouseId, auth.getName(), isAdmin(auth))
             .stream()
-            .map(OrderRestMapper::toResponse)
+            .map(this::toResponse)
             .toList();
     }
 
@@ -229,8 +229,15 @@ public class OrderController {
             Authentication auth) {
         return orderService.listByOperator(operatorId, auth.getName(), isAdmin(auth))
             .stream()
-            .map(OrderRestMapper::toResponse)
+            .map(this::toResponse)
             .toList();
+    }
+
+    private OrderResponse toResponse(Order order) {
+        return new OrderResponse(
+            order.getOrderId(),
+            order.getStatus().name()
+        );
     }
 
     private boolean isAdmin(Authentication auth) {

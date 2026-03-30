@@ -1,4 +1,4 @@
-package com.fulfillment.orderservice.infrastructure.rest.dto;
+package com.fulfillment.orderservice.infrastructure.rest.dto.request;
 
 import java.util.List;
 

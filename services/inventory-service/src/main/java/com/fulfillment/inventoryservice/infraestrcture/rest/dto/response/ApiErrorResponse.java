@@ -1,4 +1,4 @@
-package com.fulfillment.inventoryservice.infraestrcture.rest.dto;
+package com.fulfillment.inventoryservice.infraestrcture.rest.dto.response;
 
 import java.util.List;
 

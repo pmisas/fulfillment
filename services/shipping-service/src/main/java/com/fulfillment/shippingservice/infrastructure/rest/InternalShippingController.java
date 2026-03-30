@@ -14,8 +14,8 @@ import com.fulfillment.shippingservice.application.ShippingService;
 import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
 import com.fulfillment.shippingservice.domain.model.CarrierCode;
 import com.fulfillment.shippingservice.domain.model.Shipment;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.InternalCreateShipmentRequest;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.ShipmentResponse;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.request.InternalCreateShipmentRequest;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.response.ShipmentResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

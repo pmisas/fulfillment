@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.infrastructure.rest.dto;
+package com.fulfillment.warehouseservice.infrastructure.rest.dto.response;
 
 import java.util.List;
 

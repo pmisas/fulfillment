@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.warehouseservice.application.WarehouseService;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseResponse;
+import com.fulfillment.warehouseservice.domain.model.Warehouse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.WarehouseResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -41,8 +42,17 @@ public class WarehouseInternalController {
     @ResponseStatus(HttpStatus.OK)
     public List<WarehouseResponse> getAllWarehouses() {
         return warehouseService.getAll().stream()
-                .map(WarehouseRestMapper::toResponse)
+                .map(this::toResponse)
                 .toList();
+    }
+
+    private WarehouseResponse toResponse(Warehouse warehouse) {
+        return new WarehouseResponse(
+            warehouse.getWarehouseId(),
+            warehouse.getCity(),
+            warehouse.getLat(),
+            warehouse.getLng()
+        );
     }
 
 }

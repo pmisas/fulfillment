@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.warehouseservice.application.WarehouseAccessService;
 import com.fulfillment.warehouseservice.domain.model.WarehouseAccess;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.UserWarehouseAccessResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.UserWarehouseAccessResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
