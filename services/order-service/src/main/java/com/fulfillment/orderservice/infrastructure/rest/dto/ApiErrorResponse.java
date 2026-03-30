@@ -22,7 +22,7 @@ public record ApiErrorResponse(
         @Schema(description = "Nombre del campo que violó la validación", example = "lat")
         String field,
 
-        @Schema(description = "Mensaje descriptivo de la violación de validación", example = "Latitude must be between -90 and 90")
+        @Schema(description = "Mensaje de la violación de validación", example = "Latitude must be between -90 and 90")
         String message
     ) {}
 } 
