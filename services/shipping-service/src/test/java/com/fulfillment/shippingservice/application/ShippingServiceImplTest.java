@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
 import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentGuideNotReadyException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
@@ -69,17 +68,15 @@ class ShippingServiceImplTest {
             "shipments/ship-1/guide.pdf"
         );
 
-        CreateShipmentCommand command = new CreateShipmentCommand(
+        when(shipmentRepository.findByOrderId("order-1")).thenReturn(List.of(existing));
+
+        Shipment result = service.create(
             "order-1",
             "wh-1",
             CarrierCode.INTERNAL_CARRIER,
-            List.of(new CreateShipmentCommand.Item("SKU-1", 2)),
+            List.of(new ShippingService.ShipmentItemInput("SKU-1", 2)),
             Instant.now().plusSeconds(86400)
         );
-
-        when(shipmentRepository.findByOrderId("order-1")).thenReturn(List.of(existing));
-
-        Shipment result = service.create(command);
 
         assertSame(existing, result);
         verify(pdfGenerator, never()).generate(any());
@@ -104,20 +101,18 @@ class ShippingServiceImplTest {
 
         Shipment withGuide = existing.withShippingGuideS3Key("shipments/ship-1/guide.pdf");
 
-        CreateShipmentCommand command = new CreateShipmentCommand(
-            "order-1",
-            "wh-1",
-            CarrierCode.INTERNAL_CARRIER,
-            List.of(new CreateShipmentCommand.Item("SKU-1", 2)),
-            Instant.now().plusSeconds(86400)
-        );
-
         when(shipmentRepository.findByOrderId("order-1")).thenReturn(List.of(existing));
         when(pdfGenerator.generate(existing)).thenReturn(new byte[]{1, 2, 3});
         when(shippingGuideStorage.upload(eq("ship-1"), any())).thenReturn("shipments/ship-1/guide.pdf");
         when(shipmentRepository.save(any())).thenReturn(withGuide);
 
-        Shipment result = service.create(command);
+        Shipment result = service.create(
+            "order-1",
+            "wh-1",
+            CarrierCode.INTERNAL_CARRIER,
+            List.of(new ShippingService.ShipmentItemInput("SKU-1", 2)),
+            Instant.now().plusSeconds(86400)
+        );
 
         assertEquals("shipments/ship-1/guide.pdf", result.getShippingGuideS3Key());
         verify(pdfGenerator).generate(existing);
@@ -127,20 +122,18 @@ class ShippingServiceImplTest {
 
     @Test
     void create_shouldCreateShipmentAndUploadGuideWhenShipmentDoesNotExist() {
-        CreateShipmentCommand command = new CreateShipmentCommand(
-            "order-1",
-            "wh-1",
-            CarrierCode.INTERNAL_CARRIER,
-            List.of(new CreateShipmentCommand.Item("SKU-1", 2)),
-            Instant.now().plusSeconds(86400)
-        );
-
         when(shipmentRepository.findByOrderId("order-1")).thenReturn(List.of());
         when(pdfGenerator.generate(any())).thenReturn(new byte[]{1, 2});
         when(shippingGuideStorage.upload(anyString(), any())).thenReturn("shipments/generated/guide.pdf");
         when(shipmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Shipment result = service.create(command);
+        Shipment result = service.create(
+            "order-1",
+            "wh-1",
+            CarrierCode.INTERNAL_CARRIER,
+            List.of(new ShippingService.ShipmentItemInput("SKU-1", 2)),
+            Instant.now().plusSeconds(86400)
+        );
 
         assertNotNull(result.getShipmentId());
         assertEquals("order-1", result.getOrderId());
@@ -174,7 +167,10 @@ class ShippingServiceImplTest {
     void getById_shouldThrowWhenShipmentDoesNotExist() {
         when(shipmentRepository.findById("missing")).thenReturn(Optional.empty());
 
-        assertThrows(ShipmentNotFoundException.class, () -> service.getById("missing"));
+        ShipmentNotFoundException exception =
+            assertThrows(ShipmentNotFoundException.class, () -> service.getById("missing"));
+
+        assertNotNull(exception);
     }
 
     @Test
@@ -282,7 +278,10 @@ class ShippingServiceImplTest {
         when(shipmentWriteTx.saveStatusWithOutbox(any(), eq(ShipmentStatus.PENDING), any()))
             .thenReturn(Optional.empty());
 
-        assertThrows(InvalidStatusTransitionException.class, () -> service.markAsShipped("ship-1"));
+        InvalidStatusTransitionException exception =
+            assertThrows(InvalidStatusTransitionException.class, () -> service.markAsShipped("ship-1"));
+
+        assertNotNull(exception);
     }
 
     @Test
@@ -341,7 +340,10 @@ class ShippingServiceImplTest {
         when(shipmentWriteTx.saveStatusWithOutbox(any(), eq(ShipmentStatus.SHIPPED), any()))
             .thenReturn(Optional.empty());
 
-        assertThrows(InvalidStatusTransitionException.class, () -> service.markAsDelivered("ship-1"));
+        InvalidStatusTransitionException exception =
+            assertThrows(InvalidStatusTransitionException.class, () -> service.markAsDelivered("ship-1"));
+
+        assertNotNull(exception);
     }
 
     @Test
@@ -357,7 +359,10 @@ class ShippingServiceImplTest {
 
         when(shipmentRepository.findById("ship-1")).thenReturn(Optional.of(shipment));
 
-        assertThrows(ShipmentGuideNotReadyException.class, () -> service.getShippingGuideUrl("ship-1"));
+        ShipmentGuideNotReadyException exception =
+            assertThrows(ShipmentGuideNotReadyException.class, () -> service.getShippingGuideUrl("ship-1"));
+
+        assertNotNull(exception);
     }
 
     @Test

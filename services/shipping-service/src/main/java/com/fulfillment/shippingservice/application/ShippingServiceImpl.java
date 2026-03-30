@@ -1,7 +1,5 @@
 package com.fulfillment.shippingservice.application;
 
-import static com.fulfillment.shippingservice.domain.shared.DomainValidations.requireNonBlank;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -10,13 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
-import com.fulfillment.shippingservice.application.dto.ShipmentShippedPayload;
 import com.fulfillment.shippingservice.application.dto.ShipmentDeliveredPayload;
+import com.fulfillment.shippingservice.application.dto.ShipmentShippedPayload;
 import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentGuideNotReadyException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
+import com.fulfillment.shippingservice.domain.model.CarrierCode;
 import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.domain.model.ShipmentItem;
 import com.fulfillment.shippingservice.domain.model.ShipmentStatus;
@@ -25,6 +24,7 @@ import com.fulfillment.shippingservice.domain.ports.ShipmentRepository;
 import com.fulfillment.shippingservice.domain.ports.ShipmentWriteTransaction;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuidePdfGenerator;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuideStorage;
+import static com.fulfillment.shippingservice.domain.shared.DomainValidations.requireNonBlank;
 
 @Service
 public class ShippingServiceImpl implements ShippingService {
@@ -51,15 +51,20 @@ public class ShippingServiceImpl implements ShippingService {
     }
 
     @Override
-    public Shipment create(CreateShipmentCommand command) {
-        List<Shipment> existing = shipmentRepository.findByOrderId(command.orderId());
+    public Shipment create(
+            String orderId,
+            String warehouseId,
+            CarrierCode carrier,
+            List<ShipmentItemInput> items,
+            java.time.Instant estimatedDeliveryAt) {
+        List<Shipment> existing = shipmentRepository.findByOrderId(orderId);
         if (!existing.isEmpty()) {
             Shipment existingShipment = existing.get(0);
             if (existingShipment.getShippingGuideS3Key() != null) {
-                log.info("Shipment already exists for orderId={}, returning existing (idempotent)", command.orderId());
+                log.info("Shipment already exists for orderId={}, returning existing (idempotent)", orderId);
                 return existingShipment;
             }
-            log.info("Shipment exists for orderId={} but guide not uploaded, regenerating", command.orderId());
+            log.info("Shipment exists for orderId={} but guide not uploaded, regenerating", orderId);
             byte[] pdfBytes = pdfGenerator.generate(existingShipment);
             String s3Key = shippingGuideStorage.upload(existingShipment.getShipmentId(), pdfBytes);
             return shipmentRepository.save(existingShipment.withShippingGuideS3Key(s3Key));
@@ -67,17 +72,17 @@ public class ShippingServiceImpl implements ShippingService {
 
         String shipmentId = UUID.randomUUID().toString();
 
-        List<ShipmentItem> items = command.items().stream()
+        List<ShipmentItem> shipmentItems = items.stream()
                 .map(item -> ShipmentItem.createShipmentItem(item.sku(), item.quantity()))
                 .toList();
 
         Shipment shipment = Shipment.createShipment(
                 shipmentId,
-                command.orderId(),
-                command.warehouseId(),
-                command.carrier(),
-                items,
-                command.estimatedDeliveryAt());
+                orderId,
+                warehouseId,
+                carrier,
+                shipmentItems,
+                estimatedDeliveryAt);
 
         Shipment saved = shipmentRepository.save(shipment);
 
@@ -86,7 +91,7 @@ public class ShippingServiceImpl implements ShippingService {
         Shipment withGuide = shipmentRepository.save(saved.withShippingGuideS3Key(s3Key));
 
         log.info("Shipment created with guide for orderId={} shipmentId={}",
-                command.orderId(), shipmentId);
+                orderId, shipmentId);
         return withGuide;
     }
 
@@ -180,7 +185,7 @@ public class ShippingServiceImpl implements ShippingService {
                     new ShipmentDeliveredPayload(
                             shipment.getOrderId(),
                             shipment.getShipmentId()));
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize ShipmentDelivered payload: " + e.getMessage(), e);
         }
     }
@@ -197,7 +202,7 @@ public class ShippingServiceImpl implements ShippingService {
                             shipment.getEstimatedDeliveryAt() != null
                                 ? shipment.getEstimatedDeliveryAt().toString()
                                 : null));
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize ShipmentShipped payload: " + e.getMessage(), e);
         }
     }
