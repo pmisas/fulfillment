@@ -10,7 +10,7 @@ import com.fulfillment.orderstateprocesor.domain.model.Order;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
-import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderstateprocesor.domain.ports.OrderStateTransitionTransaction;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.ShipmentDeliveredEvent;
 
 import reactor.core.publisher.Mono;
@@ -24,16 +24,16 @@ public class OrderDeliveredHandler implements OrderEventHandler {
 
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
-    private final OrderStateHistoryRepository historyRepo;
+    private final OrderStateTransitionTransaction transitionTx;
 
     public OrderDeliveredHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo
+        OrderStateTransitionTransaction transitionTx
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
-        this.historyRepo = historyRepo;
+        this.transitionTx = transitionTx;
     }
 
     @Override
@@ -64,16 +64,17 @@ public class OrderDeliveredHandler implements OrderEventHandler {
         }
 
         Order next = order.withStatus(Status.DELIVERED);
+        OrderStateHistory history = OrderStateHistory.transition(order.getOrderId(), Status.SHIPPED, Status.DELIVERED);
 
-        return orderRepo.saveIfStatusIs(next, Status.SHIPPED)
+        return transitionTx.transitionIfCurrentStatus(next, Status.SHIPPED, history)
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} already advanced past SHIPPED (concurrent message), skipping DELIVERED transition",
                         order.getOrderId());
-                    return Mono.<Void>empty();
+                    return Mono.empty();
                 }
-                return historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.SHIPPED, Status.DELIVERED))
-                    .doOnSuccess(v -> log.info("Order {} -> DELIVERED (shipmentId={})", order.getOrderId(), shipmentId));
+                log.info("Order {} -> DELIVERED (shipmentId={})", order.getOrderId(), shipmentId);
+                return Mono.empty();
             });
     }
 

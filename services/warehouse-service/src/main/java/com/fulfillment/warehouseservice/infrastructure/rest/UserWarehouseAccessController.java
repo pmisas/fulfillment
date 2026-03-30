@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.warehouseservice.application.WarehouseAccessService;
 import com.fulfillment.warehouseservice.domain.model.WarehouseAccess;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.UserWarehouseAccessResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +34,12 @@ public class UserWarehouseAccessController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Acceso encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserWarehouseAccessResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Acceso no encontrado")
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos para consultar accesos",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Acceso no encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/{userId}/warehouse-access")
     public UserWarehouseAccessResponse getWarehouseAccessByUser(@PathVariable String userId) {

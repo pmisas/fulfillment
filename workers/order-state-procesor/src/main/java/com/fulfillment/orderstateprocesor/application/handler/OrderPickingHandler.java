@@ -10,7 +10,7 @@ import com.fulfillment.orderstateprocesor.domain.model.Order;
 import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
-import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderstateprocesor.domain.ports.OrderStateTransitionTransaction;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.WarehouseOrderActionEvent;
 
 import reactor.core.publisher.Mono;
@@ -24,16 +24,16 @@ public class OrderPickingHandler implements OrderEventHandler {
 
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
-    private final OrderStateHistoryRepository historyRepo;
+    private final OrderStateTransitionTransaction transitionTx;
 
     public OrderPickingHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo
+        OrderStateTransitionTransaction transitionTx
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
-        this.historyRepo = historyRepo;
+        this.transitionTx = transitionTx;
     }
 
     @Override
@@ -75,16 +75,17 @@ public class OrderPickingHandler implements OrderEventHandler {
         }
 
         Order next = withWh.withStatus(Status.PICKED);
+        OrderStateHistory history = OrderStateHistory.transition(order.getOrderId(), Status.VALIDATED, Status.PICKED);
 
-        return orderRepo.saveIfStatusIs(next, Status.VALIDATED)
+        return transitionTx.transitionIfCurrentStatus(next, Status.VALIDATED, history)
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} already advanced past VALIDATED (concurrent message), skipping PICKED transition",
                         order.getOrderId());
-                    return Mono.<Void>empty();
+                    return Mono.empty();
                 }
-                return historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.VALIDATED, Status.PICKED))
-                    .doOnSuccess(v -> log.info("Order {} -> PICKED (warehouse={})", order.getOrderId(), warehouseId));
+                log.info("Order {} -> PICKED (warehouse={})", order.getOrderId(), warehouseId);
+                return Mono.empty();
             });
     }
 
