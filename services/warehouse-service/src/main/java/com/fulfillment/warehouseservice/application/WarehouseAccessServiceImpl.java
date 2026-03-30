@@ -6,7 +6,6 @@ import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
-import com.fulfillment.warehouseservice.application.dto.AssignWarehouseManagerCommand;
 import com.fulfillment.warehouseservice.domain.exception.UserNotFoundException;
 import com.fulfillment.warehouseservice.domain.exception.UserRoleNotAllowedException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseAccessNotFoundException;
@@ -38,21 +37,26 @@ public class WarehouseAccessServiceImpl implements WarehouseAccessService {
     }
 
     @Override
-    public WarehouseAccess assignManager(AssignWarehouseManagerCommand command) {
-        String warehouseId = requireNonBlank(command.warehouseId(), "warehouseId").trim();
-        String userId = requireNonBlank(command.userId(), "userId").trim();
+    public WarehouseAccess assignManager(String warehouseId, String userId, String assignedBy) {
+        String normalizedWarehouseId = requireNonBlank(warehouseId, "warehouseId").trim();
+        String normalizedUserId = requireNonBlank(userId, "userId").trim();
 
-        ensureWarehouseExists(warehouseId);
-        ensureWarehouseManagerUser(userId);
+        ensureWarehouseExists(normalizedWarehouseId);
+        ensureWarehouseManagerUser(normalizedUserId);
 
-        warehouseAccessRepository.findByUserId(userId)
+        warehouseAccessRepository.findByUserId(normalizedUserId)
             .filter(WarehouseAccess::isActive)
-            .filter(access -> access.getWarehouseId().equals(warehouseId))
+            .filter(access -> access.getWarehouseId().equals(normalizedWarehouseId))
             .ifPresent(access -> {
-                throw new WarehouseManagerAssignmentConflictException(userId, warehouseId);
+                throw new WarehouseManagerAssignmentConflictException(normalizedUserId, normalizedWarehouseId);
             });
 
-        WarehouseAccess assignment = WarehouseAccess.assign(userId, warehouseId, command.assignedBy(), Instant.now());
+        WarehouseAccess assignment = WarehouseAccess.assign(
+            normalizedUserId,
+            normalizedWarehouseId,
+            assignedBy,
+            Instant.now()
+        );
         return warehouseAccessRepository.save(assignment);
     }
 
