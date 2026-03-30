@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 @SpringBootTest
 @ActiveProfiles("local")
+@SuppressWarnings("unused")
 class OrderStateProcesorApplicationTests {
 
 	@MockitoBean

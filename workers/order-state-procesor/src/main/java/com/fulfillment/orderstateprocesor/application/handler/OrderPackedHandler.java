@@ -1,10 +1,10 @@
 package com.fulfillment.orderstateprocesor.application.handler;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderstateprocesor.domain.exception.OrderNotFoundException;
@@ -13,7 +13,7 @@ import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
-import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderstateprocesor.domain.ports.OrderStateTransitionTransaction;
 import com.fulfillment.orderstateprocesor.domain.ports.ShippingClient;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.WarehouseOrderActionEvent;
 
@@ -28,20 +28,20 @@ public class OrderPackedHandler implements OrderEventHandler {
 
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
-    private final OrderStateHistoryRepository historyRepo;
+    private final OrderStateTransitionTransaction transitionTx;
     private final InventoryClient inventoryClient;
     private final ShippingClient shippingClient;
 
     public OrderPackedHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo,
+        OrderStateTransitionTransaction transitionTx,
         InventoryClient inventoryClient,
         ShippingClient shippingClient
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
-        this.historyRepo = historyRepo;
+        this.transitionTx = transitionTx;
         this.inventoryClient = inventoryClient;
         this.shippingClient = shippingClient;
     }
@@ -80,33 +80,36 @@ public class OrderPackedHandler implements OrderEventHandler {
             return Mono.empty();
         }
 
-        Order next = order.withStatus(Status.PACKED);
-
         String reservationId = "resv:" + order.getOrderId();
 
         List<ShippingClient.ShipmentItemDto> shipmentItems = order.getItems().stream()
             .map(i -> new ShippingClient.ShipmentItemDto(i.getSku(), i.getQuantity()))
             .toList();
 
-        return orderRepo.saveIfStatusIs(next, Status.PICKED)
+        Order next = order.withStatus(Status.PACKED);
+        OrderStateHistory history = OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED);
+
+        return inventoryClient.consumeReservation(reservationId)
+            .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}",
+                reservationId, order.getOrderId(), result))
+            .flatMap(result -> {
+                if (result != InventoryClient.ConsumeResult.CONSUMED
+                        && result != InventoryClient.ConsumeResult.RESERVATION_NOT_FOUND) {
+                    return Mono.error(new IllegalStateException(
+                        "Reservation " + reservationId + " was not consumed for order " + order.getOrderId()
+                    ));
+                }
+                return shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems);
+            })
+            .then(transitionTx.transitionIfCurrentStatus(next, Status.PICKED, history))
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} already advanced past PICKED (concurrent message), skipping PACKED transition",
                         order.getOrderId());
-                    return Mono.<Void>empty();
+                    return Mono.empty();
                 }
-                return inventoryClient.consumeReservation(reservationId)
-                    .doOnNext(result -> log.info("Reservation {} consume result for order {}: {}", reservationId, order.getOrderId(), result))
-                    .flatMap(result -> {
-                        if (result != InventoryClient.ConsumeResult.CONSUMED) {
-                            return Mono.error(new IllegalStateException(
-                                "Reservation " + reservationId + " was not consumed for order " + order.getOrderId()
-                            ));
-                        }
-                        return shippingClient.createShipment(order.getOrderId(), order.getWarehouseId(), shipmentItems);
-                    })
-                    .then(historyRepo.append(OrderStateHistory.transition(order.getOrderId(), Status.PICKED, Status.PACKED)))
-                    .doOnSuccess(v -> log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId));
+                log.info("Order {} -> PACKED (warehouse={})", order.getOrderId(), warehouseId);
+                return Mono.empty();
             });
     }
 

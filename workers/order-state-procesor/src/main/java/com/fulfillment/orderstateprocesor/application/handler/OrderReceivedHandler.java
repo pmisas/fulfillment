@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderstateprocesor.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderstateprocesor.domain.model.Order;
@@ -15,7 +16,7 @@ import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient.ReserveResult;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
-import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderstateprocesor.domain.ports.OrderStateTransitionTransaction;
 import com.fulfillment.orderstateprocesor.domain.ports.WarehouseClient;
 import com.fulfillment.orderstateprocesor.domain.ports.WarehouseClient.WarehouseSummary;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.OrderReceivedEvent;
@@ -37,20 +38,20 @@ public class OrderReceivedHandler implements OrderEventHandler {
 
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
-    private final OrderStateHistoryRepository historyRepo;
+    private final OrderStateTransitionTransaction transitionTx;
     private final WarehouseClient warehouseClient;
     private final InventoryClient inventoryClient;
 
     public OrderReceivedHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo,
+        OrderStateTransitionTransaction transitionTx,
         WarehouseClient warehouseClient,
         InventoryClient inventoryClient
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
-        this.historyRepo = historyRepo;
+        this.transitionTx = transitionTx;
         this.warehouseClient = warehouseClient;
         this.inventoryClient = inventoryClient;
     }
@@ -69,7 +70,7 @@ public class OrderReceivedHandler implements OrderEventHandler {
             .switchIfEmpty(Mono.error(new OrderNotFoundException(orderId)))
             .flatMap(order -> {
                 if (order.getStatus() != Status.RECEIVED) {
-                    log.info("Order {} already in status {}, skipping processing (idempotency)", 
+                    log.info("Order {} already in status {}, skipping processing (idempotency)",
                             orderId, order.getStatus());
                     return Mono.<Void>empty();
                 }
@@ -87,7 +88,7 @@ public class OrderReceivedHandler implements OrderEventHandler {
         return rankWarehouses(order, skus)
             .doOnNext(rankedIds -> log.info("Ranked warehouses for order={}: {}", order.getOrderId(), rankedIds))
             .flatMap(rankedIds -> tryReserveInOrder(rankedIds, reservationId, order, skus))
-            .doOnNext(warehouseId -> log.info("tryReserveInOrder succeeded with warehouse={} for order={}", 
+            .doOnNext(warehouseId -> log.info("tryReserveInOrder succeeded with warehouse={} for order={}",
                                               warehouseId, order.getOrderId()))
             .flatMap(warehouseId -> persistValidated(order, warehouseId).thenReturn(warehouseId))
             .switchIfEmpty(Mono.defer(() -> {
@@ -98,9 +99,9 @@ public class OrderReceivedHandler implements OrderEventHandler {
     }
 
     private Mono<String> tryReserveInOrder(List<String> rankedWarehouseIds,
-                                            String reservationId,
-                                            Order order,
-                                            List<InventoryClient.SkuQuantity> skus) {
+                                           String reservationId,
+                                           Order order,
+                                           List<InventoryClient.SkuQuantity> skus) {
         return Flux.fromIterable(rankedWarehouseIds)
             .concatMap(warehouseId -> {
                 log.info("Attempting reserve on warehouse={} for order={}", warehouseId, order.getOrderId());
@@ -121,36 +122,35 @@ public class OrderReceivedHandler implements OrderEventHandler {
         Order assigned = order.getWarehouseId() != null && order.getWarehouseId().equals(warehouseId)
             ? order
             : order.withWarehouse(warehouseId);
-        Order validated = assigned.withStatus(Status.VALIDATED);
 
-        return orderRepo.saveIfStatusIs(validated, Status.RECEIVED)
+        Order validated = assigned.withStatus(Status.VALIDATED);
+        OrderStateHistory history = OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.VALIDATED);
+
+        return transitionTx.transitionIfCurrentStatus(validated, Status.RECEIVED, history)
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} already processed by another handler, skipping VALIDATED transition",
                              order.getOrderId());
-                    return Mono.just("idempotent").then();
+                    return Mono.empty();
                 }
-                return historyRepo.append(
-                    OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.VALIDATED))
-                    .doOnSuccess(v -> log.info("Order {} VALIDATED with warehouse {}", 
-                                               order.getOrderId(), warehouseId));
+                log.info("Order {} VALIDATED with warehouse {}", order.getOrderId(), warehouseId);
+                return Mono.empty();
             });
     }
 
     private Mono<Void> persistRejected(Order order) {
         Order rejected = order.withStatus(Status.REJECTED);
-        return orderRepo.saveIfStatusIs(rejected, Status.RECEIVED)
+        OrderStateHistory history = OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED);
+
+        return transitionTx.transitionIfCurrentStatus(rejected, Status.RECEIVED, history)
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} already processed by another handler, skipping REJECTED transition",
                              order.getOrderId());
-                    return Mono.just("idempotent").then();
+                    return Mono.empty();
                 }
-                return historyRepo.append(
-                    OrderStateHistory.transition(order.getOrderId(), Status.RECEIVED, Status.REJECTED))
-                    .doOnSuccess(v -> log.warn("Order {} REJECTED — no warehouse could reserve stock", 
-                                               order.getOrderId()))
-                    .then();
+                log.warn("Order {} REJECTED — no warehouse could reserve stock", order.getOrderId());
+                return Mono.empty();
             });
     }
 
@@ -176,9 +176,9 @@ public class OrderReceivedHandler implements OrderEventHandler {
     }
 
     private Mono<ScoredWarehouse> scoreWarehouse(WarehouseSummary w,
-                                                  Order order,
-                                                  List<InventoryClient.SkuQuantity> skus,
-                                                  double maxDist) {
+                                                 Order order,
+                                                 List<InventoryClient.SkuQuantity> skus,
+                                                 double maxDist) {
         double dist = haversine(order.getLat(), order.getLng(), w.lat(), w.lng());
         double distScore = (maxDist == 0) ? 1.0 : 1.0 - (dist / maxDist);
 
@@ -215,19 +215,19 @@ public class OrderReceivedHandler implements OrderEventHandler {
     }
 
     private double haversine(double lat1, double lng1, double lat2, double lng2) {
-        final double R = 6371.0;
+        final double r = 6371.0;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLng = Math.toRadians(lng2 - lng1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                  + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                  * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private OrderReceivedEvent parse(String json) {
         try {
             return mapper.readValue(json, OrderReceivedEvent.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Invalid OrderReceived payload: " + e.getMessage(), e);
         }
     }

@@ -87,7 +87,11 @@ public class OrderController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Orden encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El operador autenticado no tiene permisos para consultar esta orden",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Orden no encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/{id}")
@@ -133,6 +137,8 @@ public class OrderController {
         @ApiResponse(responseCode = "200", description = "Lista de órdenes",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
         @ApiResponse(responseCode = "400", description = "Filtros inválidos o incompatibles",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/mine")
@@ -162,6 +168,8 @@ public class OrderController {
         @ApiResponse(responseCode = "200", description = "Lista de órdenes",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
         @ApiResponse(responseCode = "400", description = "Estado inválido",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/by-status/{status}")
@@ -177,7 +185,9 @@ public class OrderController {
     @Operation(summary = "Listar órdenes por warehouse", description = "ADMIN ve todas. OPERATOR ve solo las suyas.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de órdenes",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class)))
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/by-warehouse/{warehouseId}")
     @ResponseStatus(HttpStatus.OK)
@@ -194,6 +204,8 @@ public class OrderController {
         @ApiResponse(responseCode = "200", description = "Lista de órdenes",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))),
         @ApiResponse(responseCode = "403", description = "Acceso denegado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/by-operator/{operatorId}")

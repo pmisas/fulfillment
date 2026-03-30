@@ -11,7 +11,7 @@ import com.fulfillment.orderstateprocesor.domain.model.OrderStateHistory;
 import com.fulfillment.orderstateprocesor.domain.model.Status;
 import com.fulfillment.orderstateprocesor.domain.ports.InventoryClient;
 import com.fulfillment.orderstateprocesor.domain.ports.OrderRepository;
-import com.fulfillment.orderstateprocesor.domain.ports.OrderStateHistoryRepository;
+import com.fulfillment.orderstateprocesor.domain.ports.OrderStateTransitionTransaction;
 import com.fulfillment.orderstateprocesor.infrastructure.messaging.sqs.dto.OrderCancellationRequestedEvent;
 
 import reactor.core.publisher.Mono;
@@ -25,18 +25,18 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
-    private final OrderStateHistoryRepository historyRepo;
+    private final OrderStateTransitionTransaction transitionTx;
     private final InventoryClient inventoryClient;
 
     public OrderCancelledHandler(
         ObjectMapper mapper,
         OrderRepository orderRepo,
-        OrderStateHistoryRepository historyRepo,
+        OrderStateTransitionTransaction transitionTx,
         InventoryClient inventoryClient
     ) {
         this.mapper = mapper;
         this.orderRepo = orderRepo;
-        this.historyRepo = historyRepo;
+        this.transitionTx = transitionTx;
         this.inventoryClient = inventoryClient;
     }
 
@@ -63,8 +63,7 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
                 if (order.getStatus() == Status.CANCELED) {
                     log.info("Order {} already CANCELED (duplicate message - idempotent)", orderId);
-                    return releaseInventoryIfNeeded(reservationId, orderId)
-                        .then(Mono.empty());
+                    return releaseInventoryIfNeeded(reservationId, orderId).then();
                 }
 
                 if (order.getStatus() == Status.SHIPPED) {
@@ -89,11 +88,11 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
     private Mono<Void> releaseInventoryIfNeeded(String reservationId, String orderId) {
         log.info("Attempting to release inventory: reservationId={}, orderId={}", reservationId, orderId);
-        
+
         return inventoryClient.releaseReservation(reservationId)
             .doOnSuccess(v -> log.info("Successfully released reservation {} for order={}", reservationId, orderId))
             .onErrorResume(ex -> {
-                log.warn("Could not release reservation {} for order={}: {} (may not exist or already released)", 
+                log.warn("Could not release reservation {} for order={}: {} (may not exist or already released)",
                           reservationId, orderId, ex.getMessage());
                 return Mono.empty();
             });
@@ -108,23 +107,25 @@ public class OrderCancelledHandler implements OrderEventHandler {
 
     private Mono<Void> persistCancelled(Order current, String reason) {
         Order cancelled = current.withStatus(Status.CANCELED);
+        OrderStateHistory history = OrderStateHistory.transition(
+            current.getOrderId(),
+            current.getStatus(),
+            Status.CANCELED
+        );
 
         log.info("Attempting to cancel order={} from status={}", current.getOrderId(), current.getStatus());
 
-        return orderRepo.saveIfStatusIs(cancelled, current.getStatus())
+        return transitionTx.transitionIfCurrentStatus(cancelled, current.getStatus(), history)
             .flatMap(saved -> {
                 if (!saved) {
                     log.info("Order {} was updated concurrently (status no longer {}), skipping CANCELED transition",
                              current.getOrderId(), current.getStatus());
-                    return Mono.just("concurrent-update").then();
+                    return Mono.empty();
                 }
 
-                log.info("Order {} successfully marked as CANCELED", current.getOrderId());
-
-                return historyRepo.append(
-                    OrderStateHistory.transition(current.getOrderId(), current.getStatus(), Status.CANCELED)
-                ).doOnSuccess(v -> log.info("Order {} transitioned {} -> CANCELED, reason={}",
-                                            current.getOrderId(), current.getStatus(), reason));
+                log.info("Order {} transitioned {} -> CANCELED, reason={}",
+                    current.getOrderId(), current.getStatus(), reason);
+                return Mono.empty();
             });
     }
 

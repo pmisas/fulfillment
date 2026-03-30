@@ -66,6 +66,8 @@ public class WarehouseController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = WarehouseResponse.class))),
         @ApiResponse(responseCode = "400", description = "Request con campos inválidos",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos para crear bodegas",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
@@ -82,6 +84,8 @@ public class WarehouseController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Bodega encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = WarehouseResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre esta bodega",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Bodega no encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
@@ -103,6 +107,8 @@ public class WarehouseController {
         @ApiResponse(responseCode = "200", description = "Lista de bodegas",
             content = @Content(mediaType = "application/json",
                 array = @ArraySchema(schema = @Schema(implementation = WarehouseResponse.class)))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos para listar bodegas",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
@@ -117,6 +123,8 @@ public class WarehouseController {
     @Operation(summary = "Completar picking", description = "Registra que el picking de una orden en la bodega fue completado. Requiere rol WAREHOUSE_MANAGER o ADMIN.")
     @ApiResponses({
         @ApiResponse(responseCode = "202", description = "Picking completado, procesando"),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre esta bodega",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Bodega u orden no encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
@@ -139,6 +147,8 @@ public class WarehouseController {
     @Operation(summary = "Completar packing", description = "Registra que el packing de una orden en la bodega fue completado. Requiere rol WAREHOUSE_MANAGER o ADMIN.")
     @ApiResponses({
         @ApiResponse(responseCode = "202", description = "Packing completado, procesando"),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre esta bodega",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Bodega u orden no encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
@@ -162,11 +172,15 @@ public class WarehouseController {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Asignacion creada o actualizada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserWarehouseAccessResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Request con campos inválidos",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "403", description = "No autorizado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Bodega o usuario no encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "409", description = "La asignacion activa ya existe",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @PostMapping("/{warehouseId}/managers")
@@ -186,7 +200,11 @@ public class WarehouseController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Asignacion desactivada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserWarehouseAccessResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos para remover managers",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Asignacion, usuario o bodega no encontrados",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @DeleteMapping("/{warehouseId}/managers/{userId}")
@@ -200,7 +218,11 @@ public class WarehouseController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Managers encontrados",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = WarehouseManagersResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos para consultar managers",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Bodega no encontrada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/{warehouseId}/managers")

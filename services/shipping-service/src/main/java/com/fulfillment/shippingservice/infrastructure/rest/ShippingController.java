@@ -51,6 +51,8 @@ public class ShippingController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Envio encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShipmentResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre este envío",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Envio no encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
@@ -72,6 +74,8 @@ public class ShippingController {
         @ApiResponse(responseCode = "200", description = "Lista de envios",
             content = @Content(mediaType = "application/json",
                 array = @ArraySchema(schema = @Schema(implementation = ShipmentResponse.class)))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos para consultar estos envíos",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
@@ -97,6 +101,8 @@ public class ShippingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShipmentResponse.class))),
         @ApiResponse(responseCode = "400", description = "Transicion de estado invalida",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre este envío",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Envio no encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
@@ -120,6 +126,8 @@ public class ShippingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShipmentResponse.class))),
         @ApiResponse(responseCode = "400", description = "Transicion de estado invalida",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre este envío",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Envio no encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
@@ -141,6 +149,8 @@ public class ShippingController {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "URL de la guia obtenida correctamente",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShippingGuideUrlResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene permisos sobre este envío",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Envio no encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "409", description = "La guia de despacho aun no esta lista",
