@@ -19,12 +19,12 @@ import com.fulfillment.warehouseservice.application.WarehouseAccessService;
 import com.fulfillment.warehouseservice.application.WarehouseService;
 import com.fulfillment.warehouseservice.domain.model.WarehouseAccess;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.AssignWarehouseManagerRequest;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.CreateWarehouseRequest;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseResponse;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.UserWarehouseAccessResponse;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.WarehouseManagersResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.request.AssignWarehouseManagerRequest;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.request.CreateWarehouseRequest;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.UserWarehouseAccessResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.WarehouseManagersResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.WarehouseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -73,7 +73,7 @@ public class WarehouseController {
     public WarehouseResponse createWarehouse(
             @Valid @RequestBody CreateWarehouseRequest req) {
         Warehouse warehouse = warehouseService.create(req.city(), req.lat(), req.lng());
-        return WarehouseRestMapper.toResponse(warehouse);
+        return toResponse(warehouse);
     }
 
     @Operation(summary = "Consultar bodega por ID", description = "Retorna los datos de una bodega. Requiere rol WAREHOUSE_MANAGER, OPERATOR o ADMIN.")
@@ -95,7 +95,7 @@ public class WarehouseController {
             Authentication authentication) {
         warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, id);
         Warehouse warehouse = warehouseService.getById(id);
-        return WarehouseRestMapper.toResponse(warehouse);
+        return toResponse(warehouse);
     }
 
     @Operation(summary = "Listar todas las bodegas", description = "Retorna todas las bodegas registradas. Requiere rol ADMIN.")
@@ -112,7 +112,7 @@ public class WarehouseController {
     @ResponseStatus(HttpStatus.OK)
     public List<WarehouseResponse> getAllWarehouses() {
         return warehouseService.getAll().stream()
-                .map(WarehouseRestMapper::toResponse)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -233,6 +233,15 @@ public class WarehouseController {
             access.getAssignedAt(),
             access.getAssignedBy(),
             access.getUpdatedAt()
+        );
+    }
+
+    private WarehouseResponse toResponse(Warehouse warehouse) {
+        return new WarehouseResponse(
+            warehouse.getWarehouseId(),
+            warehouse.getCity(),
+            warehouse.getLat(),
+            warehouse.getLng()
         );
     }
 

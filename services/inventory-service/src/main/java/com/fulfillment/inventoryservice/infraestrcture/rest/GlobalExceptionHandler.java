@@ -13,8 +13,8 @@ import com.fulfillment.inventoryservice.domain.exception.InsufficientAvailableSt
 import com.fulfillment.inventoryservice.domain.exception.InsufficientReservedStockException;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseAccessDeniedException;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse.FieldViolation;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.response.ApiErrorResponse.FieldViolation;
 
 import jakarta.servlet.http.HttpServletRequest;
 

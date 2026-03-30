@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
+import com.fulfillment.inventoryservice.application.dto.SkuQuantity;
 import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction.ConsumeResult;
 import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction.ReserveResult;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.BatchRequest;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.CheckAvailabilityResponse;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ReserveItemsRequest;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.request.BatchRequest;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.request.ReserveItemsRequest;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.response.CheckAvailabilityResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,9 +43,19 @@ public class InventoryItemsInternalController {
             @PathVariable String warehouseId,
             @Valid @RequestBody BatchRequest req) {
 
-        AvailabilityQuery query = InventoryRestMapper.toAvailabilityQuery(warehouseId, req);
+        AvailabilityQuery query = new AvailabilityQuery(warehouseId, toSkuQuantities(req));
         AvailabilityResult result = inventoryService.checkAvailability(query);
-        return InventoryRestMapper.toAvailabilityResponse(result);
+        return new CheckAvailabilityResponse(
+            result.canFulfillAll(),
+            result.items().stream()
+                .map(i -> new CheckAvailabilityResponse.ItemAvailability(
+                    i.sku(),
+                    i.required(),
+                    i.available(),
+                    i.canFulfill()
+                ))
+                .toList()
+        );
     }
 
     
@@ -58,7 +69,7 @@ public class InventoryItemsInternalController {
             req.reservationId(),
             req.orderId(),
             warehouseId,
-            InventoryRestMapper.toSkuQuantities(req)
+            toSkuQuantities(req)
         );
 
         return switch (result) {
@@ -90,6 +101,18 @@ public class InventoryItemsInternalController {
             case CONSUMED -> ResponseEntity.noContent().build();
             case RESERVATION_NOT_FOUND -> ResponseEntity.notFound().build();
         };
+    }
+
+    private java.util.List<SkuQuantity> toSkuQuantities(BatchRequest req) {
+        return req.items().stream()
+            .map(i -> new SkuQuantity(i.sku(), i.quantity()))
+            .toList();
+    }
+
+    private java.util.List<SkuQuantity> toSkuQuantities(ReserveItemsRequest req) {
+        return req.items().stream()
+            .map(i -> new SkuQuantity(i.sku(), i.quantity()))
+            .toList();
     }
 
 }

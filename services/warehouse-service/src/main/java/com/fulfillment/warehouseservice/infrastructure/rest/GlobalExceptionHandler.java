@@ -15,8 +15,8 @@ import com.fulfillment.warehouseservice.domain.exception.WarehouseAccessDeniedEx
 import com.fulfillment.warehouseservice.domain.exception.WarehouseAccessNotFoundException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseManagerAssignmentConflictException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseNotFoundException;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.warehouseservice.infrastructure.rest.dto.response.ApiErrorResponse.FieldViolation;
 
 import jakarta.servlet.http.HttpServletRequest;
 

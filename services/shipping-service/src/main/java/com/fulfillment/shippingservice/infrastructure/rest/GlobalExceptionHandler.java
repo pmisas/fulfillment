@@ -13,8 +13,8 @@ import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionE
 import com.fulfillment.shippingservice.domain.exception.ShipmentGuideNotReadyException;
 import com.fulfillment.shippingservice.domain.exception.ShipmentNotFoundException;
 import com.fulfillment.shippingservice.domain.exception.WarehouseAccessDeniedException;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.ApiErrorResponse.FieldViolation;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.response.ApiErrorResponse.FieldViolation;
 
 import jakarta.servlet.http.HttpServletRequest;
 

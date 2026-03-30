@@ -10,9 +10,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.inventoryservice.application.InventoryWarehouseAuthorizationService;
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.BatchRequest;
-import com.fulfillment.inventoryservice.infraestrcture.rest.dto.InventoryItemResponse;
+import com.fulfillment.inventoryservice.application.dto.SkuQuantity;
+import com.fulfillment.inventoryservice.domain.model.InventoryItem;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.request.BatchRequest;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.inventoryservice.infraestrcture.rest.dto.response.InventoryItemResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -73,8 +75,8 @@ public class InventoryItemsController {
 
         inventoryWarehouseAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
 
-        return inventoryService.restockBatch(warehouseId, InventoryRestMapper.toSkuQuantities(req)).stream()
-                .map(InventoryRestMapper::toResponse)
+        return inventoryService.restockBatch(warehouseId, toSkuQuantities(req)).stream()
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -101,8 +103,25 @@ public class InventoryItemsController {
             Authentication authentication) {
         inventoryWarehouseAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         return inventoryService.getByWarehouseId(warehouseId).stream()
-                .map(InventoryRestMapper::toResponse)
+                .map(this::toResponse)
                 .toList();
+    }
+
+    private InventoryItemResponse toResponse(InventoryItem item) {
+        return new InventoryItemResponse(
+            item.getWarehouseId(),
+            item.getSku(),
+            item.getQuantity(),
+            item.getReserved(),
+            item.available(),
+            item.getUpdatedAt()
+        );
+    }
+
+    private java.util.List<SkuQuantity> toSkuQuantities(BatchRequest req) {
+        return req.items().stream()
+            .map(i -> new SkuQuantity(i.sku(), i.quantity()))
+            .toList();
     }
 
 }

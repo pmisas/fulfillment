@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.shippingservice.application.ShippingService;
 import com.fulfillment.shippingservice.application.ShippingWarehouseAuthorizationService;
 import com.fulfillment.shippingservice.domain.model.Shipment;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.ApiErrorResponse;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.ShipmentResponse;
-import com.fulfillment.shippingservice.infrastructure.rest.dto.ShippingGuideUrlResponse;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.response.ApiErrorResponse;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.response.ShipmentResponse;
+import com.fulfillment.shippingservice.infrastructure.rest.dto.response.ShippingGuideUrlResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
