@@ -2,14 +2,16 @@ package com.fulfillment.orderservice.application;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
+import com.fulfillment.orderservice.application.dto.OrderCancellationRequestedPayload;
 import com.fulfillment.orderservice.application.dto.OrderReceivedEventPayload;
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
 import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
@@ -23,27 +25,24 @@ import com.fulfillment.orderservice.domain.model.OrderStateHistory;
 import com.fulfillment.orderservice.domain.model.Status;
 import com.fulfillment.orderservice.domain.ports.IdempotencyStore;
 import com.fulfillment.orderservice.domain.ports.OrderRepository;
-import com.fulfillment.orderservice.domain.ports.OutboxEventsRepository;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction;
 import com.fulfillment.orderservice.domain.ports.OrderWriteTransaction.OutboxPendingEvent;
-
+import com.fulfillment.orderservice.domain.ports.OutboxEventsRepository;
 import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
-
-import java.util.Objects;
 
 @Service
 public class OrderServiceImpl implements OrderService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
 
+    private static final Duration PENDING_TTL = Duration.ofMinutes(2);
+    private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
+
     private final ObjectMapper mapper;
     private final OrderRepository orderRepo;
     private final IdempotencyStore idempotencyStore;
     private final OrderWriteTransaction orderWriteTransaction;
     private final OutboxEventsRepository outboxRepo;
-
-    private static final Duration PENDING_TTL = Duration.ofMinutes(2);
-    private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
 
     public OrderServiceImpl(
             ObjectMapper mapper,
@@ -59,7 +58,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Order create(CreateOrderCommand command, String idempotencyKey) {
+    public Order create(
+            String operatorId,
+            Double lat,
+            Double lng,
+            List<OrderItemInput> items,
+            String idempotencyKey) {
 
         String normalizedKey = requireNonBlank(idempotencyKey, "idempotencyKey").trim();
 
@@ -68,10 +72,15 @@ public class OrderServiceImpl implements OrderService {
             return resolveExistingKey(normalizedKey, existing.get());
         }
 
-        return createNewOrder(command, normalizedKey);
+        return createNewOrder(operatorId, lat, lng, items, normalizedKey);
     }
 
-    private Order createNewOrder(CreateOrderCommand command, String normalizedKey) {
+    private Order createNewOrder(
+            String operatorId,
+            Double lat,
+            Double lng,
+            List<OrderItemInput> items,
+            String normalizedKey) {
 
         String token = UUID.randomUUID().toString();
         boolean claimed = idempotencyStore.claimPending(normalizedKey, token, PENDING_TTL);
@@ -84,33 +93,37 @@ public class OrderServiceImpl implements OrderService {
         Order order;
 
         try {
-            order = buildNewOrder(command);
+            order = buildNewOrder(operatorId, lat, lng, items);
 
-            OrderStateHistory history =
-                    OrderStateHistory.createOrderStateHistory(
-                        UUID.randomUUID().toString(), 
-                        order.getOrderId());
+            OrderStateHistory history = OrderStateHistory.createOrderStateHistory(
+                UUID.randomUUID().toString(),
+                order.getOrderId()
+            );
 
             String eventType = "OrderReceived";
             String eventId = "OrderReceived:" + order.getOrderId() + ":" + eventType;
 
             OutboxPendingEvent outboxEvent = new OutboxPendingEvent(
-                    eventId,
-                    "ORDER",
-                    order.getOrderId(),
-                    eventType,
-                    buildOrderReceivedPayload(order)
+                eventId,
+                "ORDER",
+                order.getOrderId(),
+                eventType,
+                buildOrderReceivedPayload(order)
             );
 
             orderWriteTransaction.createOrderWithHistoryAndOutbox(order, history, outboxEvent);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             idempotencyStore.release(normalizedKey, token);
             throw e;
         }
 
         boolean finalized = idempotencyStore.finalizeOrderId(
-                normalizedKey, token, order.getOrderId(), IDEMPOTENCY_TTL);
+            normalizedKey,
+            token,
+            order.getOrderId(),
+            IDEMPOTENCY_TTL
+        );
 
         if (!finalized) {
             throw new IdempotencyInconsistentStateException(normalizedKey, order.getOrderId());
@@ -119,15 +132,19 @@ public class OrderServiceImpl implements OrderService {
         return order;
     }
 
-    private Order buildNewOrder(CreateOrderCommand command) {
+    private Order buildNewOrder(
+            String operatorId,
+            Double lat,
+            Double lng,
+            List<OrderItemInput> items) {
 
         String orderId = UUID.randomUUID().toString();
 
-        List<OrderItem> items = command.items().stream()
-                .map(i -> OrderItem.createOrderItem(i.sku(), i.quantity()))
-                .toList();
+        List<OrderItem> orderItems = items.stream()
+            .map(i -> OrderItem.createOrderItem(i.sku(), i.quantity()))
+            .toList();
 
-        return Order.createOrder(orderId, command.operatorId(), command.lat(), command.lng(), items);
+        return Order.createOrder(orderId, operatorId, lat, lng, orderItems);
     }
 
     private Order resolveExistingKey(String normalizedKey, String storedValue) {
@@ -136,14 +153,14 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return orderRepo.findById(storedValue)
-                .orElseThrow(() ->
-                        new IdempotencyInconsistentStateException(normalizedKey, storedValue));
+            .orElseThrow(() ->
+                new IdempotencyInconsistentStateException(normalizedKey, storedValue));
     }
 
     @Override
     public Order getById(String orderId, String requesterId, boolean isAdmin) {
         Order order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException(orderId));
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
         assertOwnership(order, requesterId, isAdmin);
         return order;
     }
@@ -154,14 +171,14 @@ public class OrderServiceImpl implements OrderService {
         log.info("Requesting order cancellation: orderId={}", orderId);
 
         Order current = getById(orderId, requesterId, isAdmin);
-    
+
         log.info("Order {} current status={}", orderId, current.getStatus());
-    
+
         if (current.getStatus() == Status.SHIPPED) {
             log.warn("Cannot cancel shipped order: orderId={}", orderId);
             throw new InvalidStatusTransitionException(current.getStatus(), Status.CANCELED);
         }
-    
+
         if (current.getStatus() == Status.CANCELED) {
             log.info("Order already canceled (idempotent): orderId={}", orderId);
             return;
@@ -171,7 +188,7 @@ public class OrderServiceImpl implements OrderService {
             log.info("Order already rejected, treating as canceled: orderId={}", orderId);
             return;
         }
-        
+
         String eventType = "OrderCancellationRequested";
         String eventId = "OrderCancellationRequested:" + orderId;
 
@@ -183,14 +200,17 @@ public class OrderServiceImpl implements OrderService {
             buildOrderCancellationRequestedPayload(current, "USER_REQUEST")
         );
 
-        log.info("Publishing OrderCancellationRequested event (worker will cancel and release inventory): orderId={}, eventId={}",
-                 orderId, eventId);
+        log.info(
+            "Publishing OrderCancellationRequested event (worker will cancel and release inventory): orderId={}, eventId={}",
+            orderId,
+            eventId
+        );
 
         outboxRepo.savePending(outboxEvent);
 
         log.info("OrderCancellationRequested event published successfully: orderId={}", orderId);
     }
-    
+
     private void assertOwnership(Order order, String requesterId, boolean isAdmin) {
         if (!isAdmin && !Objects.equals(order.getOperatorId(), requesterId)) {
             throw new OrderNotOwnedException(order.getOrderId());
@@ -232,29 +252,28 @@ public class OrderServiceImpl implements OrderService {
     private String buildOrderReceivedPayload(Order order) {
         try {
             var payload = new OrderReceivedEventPayload(
-                    order.getOrderId(),
-                    order.getLat(),
-                    order.getLng(),
-                    order.getItems().stream()
-                            .map(i -> new OrderReceivedEventPayload.Item(i.getSku(), i.getQuantity()))
-                            .toList()
+                order.getOrderId(),
+                order.getLat(),
+                order.getLng(),
+                order.getItems().stream()
+                    .map(i -> new OrderReceivedEventPayload.Item(i.getSku(), i.getQuantity()))
+                    .toList()
             );
             return mapper.writeValueAsString(payload);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize OrderReceived payload: " + e.getMessage(), e);
         }
     }
 
     private String buildOrderCancellationRequestedPayload(Order order, String reason) {
         try {
-            var payload = new com.fulfillment.orderservice.application.dto.OrderCancellationRequestedPayload(
+            var payload = new OrderCancellationRequestedPayload(
                 order.getOrderId(),
                 reason
             );
             return mapper.writeValueAsString(payload);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize OrderCancellationRequested payload: " + e.getMessage(), e);
         }
     }
-    
 }

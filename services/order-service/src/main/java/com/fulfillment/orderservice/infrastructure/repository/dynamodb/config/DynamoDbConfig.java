@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 
 @Configuration
 @Profile("cloud")
+@SuppressWarnings("unused")
 public class DynamoDbConfig {
     
     @Bean

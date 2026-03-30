@@ -1,13 +1,23 @@
 package com.fulfillment.orderservice.infrastructure.rest;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.orderservice.application.OrderService;
-import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.model.Order;
 import com.fulfillment.orderservice.domain.model.Status;
+import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.AsyncOperationResponse;
 import com.fulfillment.orderservice.infrastructure.rest.dto.CreateOrderRequest;
 import com.fulfillment.orderservice.infrastructure.rest.dto.OrderResponse;
@@ -20,28 +30,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.fulfillment.orderservice.infrastructure.rest.dto.ApiErrorResponse;
 import jakarta.validation.Valid;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-
-import java.util.List;
-
-
 
 @RestController
 @RequestMapping("/api/v1/orders")
 @Tag(name = "Orders", description = "Operaciones sobre órdenes")
 @SecurityRequirement(name = "bearerAuth")
 public class OrderController {
-    
+
     private final OrderService orderService;
 
     public OrderController(OrderService orderService) {
@@ -62,21 +58,30 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    @PostMapping()
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest req,
-                @Parameter(
+    public OrderResponse createOrder(
+            @Valid @RequestBody CreateOrderRequest req,
+            @Parameter(
                 description = "Clave de idempotencia para evitar crear la misma orden dos veces",
                 required = true,
                 example = "order-req-12345"
-                )
-                @RequestHeader(value = "Idempotency-Key") 
-                String idempotencyKey,
-                Authentication auth) {
+            )
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth) {
 
-        CreateOrderCommand command = OrderRestMapper.toCommand(req, auth.getName());
-        Order order = orderService.create(command, idempotencyKey);
-        
+        List<OrderService.OrderItemInput> items = req.items().stream()
+            .map(item -> new OrderService.OrderItemInput(item.sku(), item.quantity()))
+            .toList();
+
+        Order order = orderService.create(
+            auth.getName(),
+            req.lat(),
+            req.lng(),
+            items,
+            idempotencyKey
+        );
+
         return OrderRestMapper.toResponse(order);
     }
 
@@ -98,12 +103,12 @@ public class OrderController {
     @ResponseStatus(HttpStatus.OK)
     public OrderResponse getOrderById(
             @Parameter(description = "ID de la orden", required = true, example = "8d91c9aa-1234-4567-890a-abcdef123456")
-            @PathVariable("id")String id,
+            @PathVariable("id") String id,
             Authentication auth) {
         Order order = orderService.getById(id, auth.getName(), isAdmin(auth));
         return OrderRestMapper.toResponse(order);
     }
-    
+
     @Operation(
         summary = "Solicitar cancelación de una orden",
         description = "Solicita la cancelación asíncrona de una orden. La operación se procesa por eventos."
@@ -126,9 +131,8 @@ public class OrderController {
             @Parameter(description = "ID de la orden", required = true, example = "8d91c9aa-1234-4567-890a-abcdef123456")
             @PathVariable("id") String id,
             Authentication auth) {
-    
+
         orderService.cancel(id, auth.getName(), isAdmin(auth));
-        
         return AsyncOperationResponse.cancellationRequested(id);
     }
 
@@ -150,9 +154,11 @@ public class OrderController {
         if (status != null && warehouseId != null) {
             throw new IllegalArgumentException("Cannot filter by both status and warehouseId simultaneously");
         }
+
         String requesterId = auth.getName();
         boolean admin = isAdmin(auth);
         List<Order> orders;
+
         if (status != null) {
             orders = orderService.listByStatus(status, requesterId, admin);
         } else if (warehouseId != null) {
@@ -160,7 +166,10 @@ public class OrderController {
         } else {
             orders = orderService.listAll(requesterId, admin);
         }
-        return orders.stream().map(OrderRestMapper::toResponse).toList();
+
+        return orders.stream()
+            .map(OrderRestMapper::toResponse)
+            .toList();
     }
 
     @Operation(summary = "Listar órdenes por estado", description = "ADMIN ve todas. OPERATOR ve solo las suyas.")
@@ -179,7 +188,9 @@ public class OrderController {
             @PathVariable Status status,
             Authentication auth) {
         return orderService.listByStatus(status, auth.getName(), isAdmin(auth))
-                .stream().map(OrderRestMapper::toResponse).toList();
+            .stream()
+            .map(OrderRestMapper::toResponse)
+            .toList();
     }
 
     @Operation(summary = "Listar órdenes por warehouse", description = "ADMIN ve todas. OPERATOR ve solo las suyas.")
@@ -196,7 +207,9 @@ public class OrderController {
             @PathVariable String warehouseId,
             Authentication auth) {
         return orderService.listByWarehouse(warehouseId, auth.getName(), isAdmin(auth))
-                .stream().map(OrderRestMapper::toResponse).toList();
+            .stream()
+            .map(OrderRestMapper::toResponse)
+            .toList();
     }
 
     @Operation(summary = "Listar órdenes por operador", description = "Solo ADMIN.")
@@ -215,12 +228,13 @@ public class OrderController {
             @PathVariable String operatorId,
             Authentication auth) {
         return orderService.listByOperator(operatorId, auth.getName(), isAdmin(auth))
-                .stream().map(OrderRestMapper::toResponse).toList();
+            .stream()
+            .map(OrderRestMapper::toResponse)
+            .toList();
     }
 
     private boolean isAdmin(Authentication auth) {
         return auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
-
 }
