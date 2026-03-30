@@ -1,13 +1,26 @@
 package com.fulfillment.shippingservice.application;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
@@ -23,10 +36,6 @@ import com.fulfillment.shippingservice.domain.ports.ShipmentWriteTransaction;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuidePdfGenerator;
 import com.fulfillment.shippingservice.domain.ports.ShippingGuideStorage;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
 class ShippingServiceImplTest {
 
     private ShipmentRepository shipmentRepository;
@@ -37,6 +46,7 @@ class ShippingServiceImplTest {
     private ShippingServiceImpl service;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         shipmentRepository = mock(ShipmentRepository.class);
         shipmentWriteTx = mock(ShipmentWriteTransaction.class);

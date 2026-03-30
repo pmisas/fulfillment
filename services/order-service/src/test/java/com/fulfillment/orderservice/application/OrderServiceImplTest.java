@@ -15,8 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fulfillment.orderservice.application.dto.CreateOrderCommand;
 import com.fulfillment.orderservice.domain.exception.IdempotencyInconsistentStateException;
+import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
 import com.fulfillment.orderservice.domain.exception.OrderCreationInProgressException;
 import com.fulfillment.orderservice.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderservice.domain.model.Order;
@@ -46,6 +46,7 @@ class OrderServiceImplTest {
     private OrderServiceImpl service;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         service = new OrderServiceImpl(
             new ObjectMapper(),
@@ -58,18 +59,17 @@ class OrderServiceImplTest {
 
     @Test
     void create_shouldCreateOrderWhenIdempotencyKeyIsNew() {
-        CreateOrderCommand command = new CreateOrderCommand(
-            "operator-1",
-            4.7110,
-            -74.0721,
-            List.of(new CreateOrderCommand.Item("SKU-1", 2))
-        );
-
         when(idempotencyStore.get("idem-1")).thenReturn(Optional.empty());
         when(idempotencyStore.claimPending(eq("idem-1"), anyString(), any())).thenReturn(true);
         when(idempotencyStore.finalizeOrderId(eq("idem-1"), anyString(), anyString(), any())).thenReturn(true);
 
-        Order result = service.create(command, "idem-1");
+        Order result = service.create(
+            "operator-1",
+            4.7110,
+            -74.0721,
+            List.of(new OrderService.OrderItemInput("SKU-1", 2)),
+            "idem-1"
+        );
 
         assertNotNull(result);
         assertNotNull(result.getOrderId());
@@ -93,13 +93,6 @@ class OrderServiceImplTest {
 
     @Test
     void create_shouldReturnExistingOrderWhenIdempotencyKeyAlreadyPointsToOrderId() {
-        CreateOrderCommand command = new CreateOrderCommand(
-            "operator-1",
-            4.7110,
-            -74.0721,
-            List.of(new CreateOrderCommand.Item("SKU-1", 2))
-        );
-
         Order existingOrder = Order.createOrder(
             "order-123",
             "operator-1",
@@ -111,7 +104,13 @@ class OrderServiceImplTest {
         when(idempotencyStore.get("idem-1")).thenReturn(Optional.of("order-123"));
         when(orderRepo.findById("order-123")).thenReturn(Optional.of(existingOrder));
 
-        Order result = service.create(command, "idem-1");
+        Order result = service.create(
+            "operator-1",
+            4.7110,
+            -74.0721,
+            List.of(new OrderService.OrderItemInput("SKU-1", 2)),
+            "idem-1"
+        );
 
         assertSame(existingOrder, result);
         verify(orderWriteTransaction, never()).createOrderWithHistoryAndOutbox(any(), any(), any());
@@ -120,29 +119,26 @@ class OrderServiceImplTest {
 
     @Test
     void create_shouldThrowWhenIdempotencyKeyIsPending() {
-        CreateOrderCommand command = new CreateOrderCommand(
-            "operator-1",
-            4.7110,
-            -74.0721,
-            List.of(new CreateOrderCommand.Item("SKU-1", 2))
-        );
-
         when(idempotencyStore.get("idem-1")).thenReturn(Optional.of("PENDING:token-1"));
 
-        assertThrows(OrderCreationInProgressException.class, () -> service.create(command, "idem-1"));
+        OrderCreationInProgressException exception = assertThrows(
+            OrderCreationInProgressException.class,
+            () -> service.create(
+                "operator-1",
+                4.7110,
+                -74.0721,
+                List.of(new OrderService.OrderItemInput("SKU-1", 2)),
+                "idem-1"
+            )
+        );
+
+        assertNotNull(exception);
 
         verify(orderWriteTransaction, never()).createOrderWithHistoryAndOutbox(any(), any(), any());
     }
 
     @Test
     void create_shouldReleaseIdempotencyKeyWhenTransactionFails() {
-        CreateOrderCommand command = new CreateOrderCommand(
-            "operator-1",
-            4.7110,
-            -74.0721,
-            List.of(new CreateOrderCommand.Item("SKU-1", 2))
-        );
-
         when(idempotencyStore.get("idem-1")).thenReturn(Optional.empty());
         when(idempotencyStore.claimPending(eq("idem-1"), anyString(), any())).thenReturn(true);
 
@@ -150,7 +146,16 @@ class OrderServiceImplTest {
             .when(orderWriteTransaction)
             .createOrderWithHistoryAndOutbox(any(), any(), any());
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.create(command, "idem-1"));
+        RuntimeException ex = assertThrows(
+            RuntimeException.class,
+            () -> service.create(
+                "operator-1",
+                4.7110,
+                -74.0721,
+                List.of(new OrderService.OrderItemInput("SKU-1", 2)),
+                "idem-1"
+            )
+        );
         assertEquals("db failure", ex.getMessage());
 
         verify(idempotencyStore).release(eq("idem-1"), anyString());
@@ -159,18 +164,22 @@ class OrderServiceImplTest {
 
     @Test
     void create_shouldThrowWhenFinalizeFails() {
-        CreateOrderCommand command = new CreateOrderCommand(
-            "operator-1",
-            4.7110,
-            -74.0721,
-            List.of(new CreateOrderCommand.Item("SKU-1", 2))
-        );
-
         when(idempotencyStore.get("idem-1")).thenReturn(Optional.empty());
         when(idempotencyStore.claimPending(eq("idem-1"), anyString(), any())).thenReturn(true);
         when(idempotencyStore.finalizeOrderId(eq("idem-1"), anyString(), anyString(), any())).thenReturn(false);
 
-        assertThrows(IdempotencyInconsistentStateException.class, () -> service.create(command, "idem-1"));
+        IdempotencyInconsistentStateException exception = assertThrows(
+            IdempotencyInconsistentStateException.class,
+            () -> service.create(
+                "operator-1",
+                4.7110,
+                -74.0721,
+                List.of(new OrderService.OrderItemInput("SKU-1", 2)),
+                "idem-1"
+            )
+        );
+
+        assertNotNull(exception);
     }
 
     @Test
@@ -194,14 +203,20 @@ class OrderServiceImplTest {
     void getById_shouldThrowWhenOrderDoesNotExist() {
         when(orderRepo.findById("missing")).thenReturn(Optional.empty());
 
-        assertThrows(OrderNotFoundException.class, () -> service.getById("missing", "operator-1", false));
+        OrderNotFoundException exception =
+            assertThrows(OrderNotFoundException.class, () -> service.getById("missing", "operator-1", false));
+
+        assertNotNull(exception);
     }
 
     @Test
     void cancel_shouldThrowWhenOrderDoesNotExist() {
         when(orderRepo.findById("missing")).thenReturn(Optional.empty());
 
-        assertThrows(OrderNotFoundException.class, () -> service.cancel("missing", "operator-1", false));
+        OrderNotFoundException exception =
+            assertThrows(OrderNotFoundException.class, () -> service.cancel("missing", "operator-1", false));
+
+        assertNotNull(exception);
 
         verify(outboxRepo, never()).savePending(any());
     }
@@ -213,7 +228,12 @@ class OrderServiceImplTest {
         when(shipped.getStatus()).thenReturn(Status.SHIPPED);
         when(orderRepo.findById("order-1")).thenReturn(Optional.of(shipped));
 
-        assertThrows(RuntimeException.class, () -> service.cancel("order-1", "operator-1", false));
+        InvalidStatusTransitionException exception = assertThrows(
+            InvalidStatusTransitionException.class,
+            () -> service.cancel("order-1", "operator-1", false)
+        );
+
+        assertNotNull(exception);
 
         verify(outboxRepo, never()).savePending(any());
     }
