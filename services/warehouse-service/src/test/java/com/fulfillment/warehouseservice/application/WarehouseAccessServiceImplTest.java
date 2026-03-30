@@ -17,7 +17,6 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.fulfillment.warehouseservice.application.dto.AssignWarehouseManagerCommand;
 import com.fulfillment.warehouseservice.domain.exception.UserNotFoundException;
 import com.fulfillment.warehouseservice.domain.exception.UserRoleNotAllowedException;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseAccessNotFoundException;
@@ -50,7 +49,7 @@ class WarehouseAccessServiceImplTest {
             .thenReturn(Optional.of(new UserDirectory.DirectoryUser("user-1", "username-1", Set.of("WAREHOUSE_MANAGER"))));
         when(warehouseAccessRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        WarehouseAccess result = service.assignManager(new AssignWarehouseManagerCommand("wh-1", "user-1", "admin-1"));
+        WarehouseAccess result = service.assignManager("wh-1", "user-1", "admin-1");
 
         assertEquals("user-1", result.getUserId());
         assertEquals("wh-1", result.getWarehouseId());
@@ -69,7 +68,7 @@ class WarehouseAccessServiceImplTest {
         when(warehouseAccessRepository.findByUserId("user-1")).thenReturn(Optional.of(access));
 
         assertThrows(WarehouseManagerAssignmentConflictException.class,
-            () -> service.assignManager(new AssignWarehouseManagerCommand("wh-1", "user-1", "admin-1")));
+            () -> service.assignManager("wh-1", "user-1", "admin-1"));
     }
 
     @Test
@@ -82,7 +81,7 @@ class WarehouseAccessServiceImplTest {
         when(warehouseAccessRepository.findByUserId("user-1")).thenReturn(Optional.of(previous));
         when(warehouseAccessRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        WarehouseAccess result = service.assignManager(new AssignWarehouseManagerCommand("wh-1", "user-1", "admin-1"));
+        WarehouseAccess result = service.assignManager("wh-1", "user-1", "admin-1");
 
         assertEquals("wh-1", result.getWarehouseId());
         assertTrue(result.isActive());
@@ -93,7 +92,7 @@ class WarehouseAccessServiceImplTest {
         when(warehouseRepository.existsById("missing")).thenReturn(false);
 
         assertThrows(WarehouseNotFoundException.class,
-            () -> service.assignManager(new AssignWarehouseManagerCommand("missing", "user-1", "admin-1")));
+            () -> service.assignManager("missing", "user-1", "admin-1"));
     }
 
     @Test
@@ -102,7 +101,7 @@ class WarehouseAccessServiceImplTest {
         when(userDirectory.findById("user-1")).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class,
-            () -> service.assignManager(new AssignWarehouseManagerCommand("wh-1", "user-1", "admin-1")));
+            () -> service.assignManager("wh-1", "user-1", "admin-1"));
     }
 
     @Test
@@ -112,7 +111,7 @@ class WarehouseAccessServiceImplTest {
             .thenReturn(Optional.of(new UserDirectory.DirectoryUser("user-1", "username-1", Set.of("OPERATOR"))));
 
         assertThrows(UserRoleNotAllowedException.class,
-            () -> service.assignManager(new AssignWarehouseManagerCommand("wh-1", "user-1", "admin-1")));
+            () -> service.assignManager("wh-1", "user-1", "admin-1"));
     }
 
     @Test

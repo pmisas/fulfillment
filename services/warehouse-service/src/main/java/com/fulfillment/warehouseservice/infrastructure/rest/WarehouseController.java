@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.warehouseservice.application.WarehouseAccessAuthorizationService;
 import com.fulfillment.warehouseservice.application.WarehouseAccessService;
 import com.fulfillment.warehouseservice.application.WarehouseService;
-import com.fulfillment.warehouseservice.application.dto.AssignWarehouseManagerCommand;
-import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
-import com.fulfillment.warehouseservice.application.dto.WarehouseStartFlowCommand;
 import com.fulfillment.warehouseservice.domain.model.WarehouseAccess;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.infrastructure.rest.dto.ApiErrorResponse;
@@ -75,8 +72,7 @@ public class WarehouseController {
     @ResponseStatus(HttpStatus.CREATED)
     public WarehouseResponse createWarehouse(
             @Valid @RequestBody CreateWarehouseRequest req) {
-        CreateWarehouseCommand command = WarehouseRestMapper.toCommand(req);
-        Warehouse warehouse = warehouseService.create(command);
+        Warehouse warehouse = warehouseService.create(req.city(), req.lat(), req.lng());
         return WarehouseRestMapper.toResponse(warehouse);
     }
 
@@ -139,8 +135,7 @@ public class WarehouseController {
                 Authentication authentication) {
 
         warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(warehouseId, orderId);
-        warehouseService.completePicking(command);
+        warehouseService.completePicking(warehouseId, orderId);
         return ResponseEntity.accepted().build();
     }
 
@@ -163,8 +158,7 @@ public class WarehouseController {
                 Authentication authentication) {
 
         warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand(warehouseId, orderId);
-        warehouseService.completePacking(command);
+        warehouseService.completePacking(warehouseId, orderId);
         return ResponseEntity.accepted().build();
     }
 
@@ -190,9 +184,7 @@ public class WarehouseController {
             @Valid @RequestBody AssignWarehouseManagerRequest request,
             Authentication authentication) {
         String assignedBy = authentication == null ? null : authentication.getName();
-        WarehouseAccess access = warehouseAccessService.assignManager(
-            new AssignWarehouseManagerCommand(warehouseId, request.userId(), assignedBy)
-        );
+        WarehouseAccess access = warehouseAccessService.assignManager(warehouseId, request.userId(), assignedBy);
         return toAccessResponse(access);
     }
 

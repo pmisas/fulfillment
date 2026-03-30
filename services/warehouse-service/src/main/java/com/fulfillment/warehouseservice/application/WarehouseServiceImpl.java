@@ -6,10 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
 import com.fulfillment.warehouseservice.application.dto.WarehouseOrderActionPayload;
-import com.fulfillment.warehouseservice.application.dto.WarehouseStartFlowCommand;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.OutboxEventsRepository;
@@ -37,11 +36,11 @@ public class WarehouseServiceImpl implements WarehouseService{
     }
 
     @Override
-    public Warehouse create(CreateWarehouseCommand command) {
+    public Warehouse create(String city, double lat, double lng) {
         Warehouse warehouse = Warehouse.createWarehouse(
-                                command.city(), 
-                                command.lat(), 
-                                command.lng()
+                                city, 
+                                lat, 
+                                lng
         );
         warehouseRepo.save(warehouse);
         return warehouse;
@@ -64,35 +63,35 @@ public class WarehouseServiceImpl implements WarehouseService{
     }
 
     @Override
-    public void completePicking(WarehouseStartFlowCommand command) {
-        publishWarehouseFlowEvent(command, "PickingCompleted");
+    public void completePicking(String warehouseId, String orderId) {
+        publishWarehouseFlowEvent(warehouseId, orderId, "PickingCompleted");
     }
 
     @Override
-    public void completePacking(WarehouseStartFlowCommand command) {
-        publishWarehouseFlowEvent(command, "PackingCompleted");
+    public void completePacking(String warehouseId, String orderId) {
+        publishWarehouseFlowEvent(warehouseId, orderId, "PackingCompleted");
     }
 
-    private void publishWarehouseFlowEvent(WarehouseStartFlowCommand command, String eventType) {
-        String warehouseId = requireNonBlank(command.warehouseId(), "warehouseId").trim();
-        String orderId = requireNonBlank(command.orderId(), "orderId").trim();
+    private void publishWarehouseFlowEvent(String warehouseId, String orderId, String eventType) {
+        String normalizedWarehouseId = requireNonBlank(warehouseId, "warehouseId").trim();
+        String normalizedOrderId = requireNonBlank(orderId, "orderId").trim();
 
         log.info("Publishing warehouse flow event: eventType={}, orderId={}, warehouseId={}", 
-                 eventType, orderId, warehouseId);
+                 eventType, normalizedOrderId, normalizedWarehouseId);
 
-        if (!warehouseRepo.existsById(warehouseId)) {
-            log.warn("Warehouse not found: warehouseId={}", warehouseId);
-            throw new WarehouseNotFoundException(warehouseId);
+        if (!warehouseRepo.existsById(normalizedWarehouseId)) {
+            log.warn("Warehouse not found: warehouseId={}", normalizedWarehouseId);
+            throw new WarehouseNotFoundException(normalizedWarehouseId);
         }
     
-        String eventId = eventType + ":" + orderId;
+        String eventId = eventType + ":" + normalizedOrderId;
 
         OutboxPendingEvent pendingEvent = new OutboxPendingEvent(
             eventId,
             "ORDER",
-            orderId,
+            normalizedOrderId,
             eventType,
-            buildWarehouseOrderActionPayload(orderId, warehouseId)
+            buildWarehouseOrderActionPayload(normalizedOrderId, normalizedWarehouseId)
         );
 
         boolean saved = outboxRepo.savePendingIfAbsent(pendingEvent);
@@ -114,7 +113,7 @@ public class WarehouseServiceImpl implements WarehouseService{
         try {
             var payload = new WarehouseOrderActionPayload(orderId, warehouseId);
             return mapper.writeValueAsString(payload);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize warehouse action payload: " + e.getMessage(), e);
         }
     }

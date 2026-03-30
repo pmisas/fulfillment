@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fulfillment.warehouseservice.application.dto.CreateWarehouseCommand;
-import com.fulfillment.warehouseservice.application.dto.WarehouseStartFlowCommand;
 import com.fulfillment.warehouseservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import com.fulfillment.warehouseservice.domain.port.OutboxEventsRepository;
@@ -40,9 +38,7 @@ class WarehouseServiceImplTest {
 
     @Test
     void create_shouldSaveAndReturnWarehouse() {
-        CreateWarehouseCommand command = new CreateWarehouseCommand("Bogota", 4.7110, -74.0721);
-
-        Warehouse result = service.create(command);
+        Warehouse result = service.create("Bogota", 4.7110, -74.0721);
 
         assertNotNull(result);
         assertEquals("bogota", result.getCity());
@@ -97,12 +93,10 @@ class WarehouseServiceImplTest {
 
     @Test
     void completePicking_shouldPublishEventWhenWarehouseExists() {
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand("wh-1", "order-1");
-
         when(warehouseRepo.existsById("wh-1")).thenReturn(true);
         when(outboxRepo.savePendingIfAbsent(any())).thenReturn(true);
 
-        service.completePicking(command);
+        service.completePicking("wh-1", "order-1");
 
         ArgumentCaptor<OutboxPendingEvent> captor = ArgumentCaptor.forClass(OutboxPendingEvent.class);
         verify(outboxRepo).savePendingIfAbsent(captor.capture());
@@ -120,12 +114,10 @@ class WarehouseServiceImplTest {
 
     @Test
     void completePacking_shouldPublishEventWhenWarehouseExists() {
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand("wh-1", "order-1");
-
         when(warehouseRepo.existsById("wh-1")).thenReturn(true);
         when(outboxRepo.savePendingIfAbsent(any())).thenReturn(true);
 
-        service.completePacking(command);
+        service.completePacking("wh-1", "order-1");
 
         ArgumentCaptor<OutboxPendingEvent> captor = ArgumentCaptor.forClass(OutboxPendingEvent.class);
         verify(outboxRepo).savePendingIfAbsent(captor.capture());
@@ -139,35 +131,29 @@ class WarehouseServiceImplTest {
 
     @Test
     void completePicking_shouldThrowWhenWarehouseDoesNotExist() {
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand("wh-404", "order-1");
-
         when(warehouseRepo.existsById("wh-404")).thenReturn(false);
 
-        assertThrows(WarehouseNotFoundException.class, () -> service.completePicking(command));
+        assertThrows(WarehouseNotFoundException.class, () -> service.completePicking("wh-404", "order-1"));
 
         verify(outboxRepo, never()).savePendingIfAbsent(any());
     }
 
     @Test
     void completePacking_shouldThrowWhenWarehouseDoesNotExist() {
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand("wh-404", "order-1");
-
         when(warehouseRepo.existsById("wh-404")).thenReturn(false);
 
-        assertThrows(WarehouseNotFoundException.class, () -> service.completePacking(command));
+        assertThrows(WarehouseNotFoundException.class, () -> service.completePacking("wh-404", "order-1"));
 
         verify(outboxRepo, never()).savePendingIfAbsent(any());
     }
 
     @Test
     void completePicking_shouldTryResetWhenEventAlreadyExists() {
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand("wh-1", "order-1");
-
         when(warehouseRepo.existsById("wh-1")).thenReturn(true);
         when(outboxRepo.savePendingIfAbsent(any())).thenReturn(false);
         when(outboxRepo.resetToPendingIfProcessed("PickingCompleted:order-1")).thenReturn(true);
 
-        assertDoesNotThrow(() -> service.completePicking(command));
+        assertDoesNotThrow(() -> service.completePicking("wh-1", "order-1"));
 
         verify(outboxRepo).savePendingIfAbsent(any());
         verify(outboxRepo).resetToPendingIfProcessed("PickingCompleted:order-1");
@@ -175,13 +161,11 @@ class WarehouseServiceImplTest {
 
     @Test
     void completePacking_shouldTryResetWhenEventAlreadyExists() {
-        WarehouseStartFlowCommand command = new WarehouseStartFlowCommand("wh-1", "order-1");
-
         when(warehouseRepo.existsById("wh-1")).thenReturn(true);
         when(outboxRepo.savePendingIfAbsent(any())).thenReturn(false);
         when(outboxRepo.resetToPendingIfProcessed("PackingCompleted:order-1")).thenReturn(true);
 
-        assertDoesNotThrow(() -> service.completePacking(command));
+        assertDoesNotThrow(() -> service.completePacking("wh-1", "order-1"));
 
         verify(outboxRepo).savePendingIfAbsent(any());
         verify(outboxRepo).resetToPendingIfProcessed("PackingCompleted:order-1");
