@@ -37,13 +37,4 @@ public class InMemoryOrderWriteTransaction implements OrderWriteTransaction {
         outboxRepository.savePending(outboxEvent);
     }
 
-    @Override
-    public void updateOrderWithHistoryAndOutbox(
-            Order order,
-            OrderStateHistory history,
-            OutboxPendingEvent outboxEvent) {
-        orderRepository.save(order);
-        historyRepository.append(history);
-        outboxRepository.savePending(outboxEvent);
-    }
 }

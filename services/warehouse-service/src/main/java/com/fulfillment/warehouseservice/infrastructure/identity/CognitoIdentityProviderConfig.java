@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 
 @Configuration
 @Profile("cloud")
+@SuppressWarnings("unused")
 public class CognitoIdentityProviderConfig {
 
     @Bean

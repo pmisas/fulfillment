@@ -13,6 +13,11 @@ import java.time.Instant;
 import java.util.*;
 
 public class OutboxPublisherHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_PROCESSING = "PROCESSING";
+    private static final String STATUS_SENT = "SENT";
+    private static final String STATUS_FAILED = "FAILED";
+
     private final String tableName;
     private final String gsiName;
     private final String topicArn;
@@ -73,6 +78,12 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
             }
 
             try {
+                if (!claimForPublish(eventId)) {
+                    skipped++;
+                    context.getLogger().log("Skipping eventId=" + eventId + " because another publisher already claimed it\n");
+                    continue;
+                }
+
                 sendToSns(eventId, eventType, aggregateId, payload);
 
                 boolean updated = markAsSent(eventId);
@@ -103,7 +114,7 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
 
     private List<Map<String, AttributeValue>> queryPending(int limit) {
         Map<String, String> names = Map.of("#ps", "publishStatus");
-        Map<String, AttributeValue> values = Map.of(":pending", AttributeValue.builder().s("PENDING").build());
+        Map<String, AttributeValue> values = Map.of(":pending", AttributeValue.builder().s(STATUS_PENDING).build());
 
         QueryRequest request = QueryRequest.builder()
                 .tableName(tableName)   
@@ -153,8 +164,46 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
         );
 
         Map<String, AttributeValue> values = Map.of(
-                ":sent", AttributeValue.builder().s("SENT").build(),
-                ":pending", AttributeValue.builder().s("PENDING").build(),
+                ":sent", AttributeValue.builder().s(STATUS_SENT).build(),
+                ":processing", AttributeValue.builder().s(STATUS_PROCESSING).build(),
+                ":now", AttributeValue.builder().n(Long.toString(nowMs)).build(),
+                ":one", AttributeValue.builder().n("1").build()
+        );
+
+        UpdateItemRequest req = UpdateItemRequest.builder()
+                .tableName(tableName)
+                .key(key)
+                .updateExpression("SET #ps = :sent, #pa = :now")
+                .conditionExpression("#ps = :processing")
+                .expressionAttributeNames(names)
+                .expressionAttributeValues(values)
+                .returnValues(ReturnValue.NONE)
+                .build();
+
+        try {
+            dynamo.updateItem(req);
+            return true;
+        } catch (ConditionalCheckFailedException ccfe) {
+            return false;
+        }
+    }
+
+    private boolean claimForPublish(String eventId) {
+        long nowMs = Instant.now().toEpochMilli();
+
+        Map<String, AttributeValue> key = Map.of(
+                "eventId", AttributeValue.builder().s(eventId).build()
+        );
+
+        Map<String, String> names = Map.of(
+                "#ps", "publishStatus",
+                "#cs", "claimedAt",
+                "#att", "attempts"
+        );
+
+        Map<String, AttributeValue> values = Map.of(
+                ":processing", AttributeValue.builder().s(STATUS_PROCESSING).build(),
+                ":pending", AttributeValue.builder().s(STATUS_PENDING).build(),
                 ":now", AttributeValue.builder().n(Long.toString(nowMs)).build(),
                 ":one", AttributeValue.builder().n("1").build(),
                 ":zero", AttributeValue.builder().n("0").build()
@@ -163,7 +212,7 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
         UpdateItemRequest req = UpdateItemRequest.builder()
                 .tableName(tableName)
                 .key(key)
-                .updateExpression("SET #ps = :sent, #pa = :now, #att = if_not_exists(#att, :zero) + :one")
+                .updateExpression("SET #ps = :processing, #cs = :now, #att = if_not_exists(#att, :zero) + :one")
                 .conditionExpression("#ps = :pending")
                 .expressionAttributeNames(names)
                 .expressionAttributeValues(values)
@@ -187,23 +236,24 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
             Map<String, String> names = Map.of(
                     "#ps", "publishStatus",
                     "#le", "lastError",
-                    "#att", "attempts"
+                    "#cs", "claimedAt"
             );
 
             String safeError = error == null ? "unknown" : error;
             if (safeError.length() > 500) safeError = safeError.substring(0, 500);
 
             Map<String, AttributeValue> values = Map.of(
-                    ":failed", AttributeValue.builder().s("FAILED").build(),
+                    ":failed", AttributeValue.builder().s(STATUS_FAILED).build(),
+                    ":processing", AttributeValue.builder().s(STATUS_PROCESSING).build(),
                     ":err", AttributeValue.builder().s(safeError).build(),
-                    ":one", AttributeValue.builder().n("1").build(),
-                    ":zero", AttributeValue.builder().n("0").build()
+                    ":now", AttributeValue.builder().n(Long.toString(Instant.now().toEpochMilli())).build()
             );
 
             UpdateItemRequest req = UpdateItemRequest.builder()
                     .tableName(tableName)
                     .key(key)
-                    .updateExpression("SET #ps = :failed, #le = :err, #att = if_not_exists(#att, :zero) + :one")
+                    .updateExpression("SET #ps = :failed, #le = :err, #cs = :now")
+                    .conditionExpression("#ps = :processing")
                     .expressionAttributeNames(names)
                     .expressionAttributeValues(values)
                     .build();

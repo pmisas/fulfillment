@@ -174,8 +174,8 @@ public class OrderServiceImpl implements OrderService {
 
         log.info("Order {} current status={}", orderId, current.getStatus());
 
-        if (current.getStatus() == Status.SHIPPED) {
-            log.warn("Cannot cancel shipped order: orderId={}", orderId);
+        if (current.getStatus() == Status.SHIPPED || current.getStatus() == Status.PACKED) {
+            log.warn("Cannot cancel order in status {}: orderId={}", current.getStatus(), orderId);
             throw new InvalidStatusTransitionException(current.getStatus(), Status.CANCELED);
         }
 

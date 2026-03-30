@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class LocalSecurityConfig {
 
     @Bean
+    @SuppressWarnings("unused")
     SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())

@@ -183,6 +183,7 @@ public class WarehouseController {
             @PathVariable String warehouseId,
             @Valid @RequestBody AssignWarehouseManagerRequest request,
             Authentication authentication) {
+        warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         String assignedBy = authentication == null ? null : authentication.getName();
         WarehouseAccess access = warehouseAccessService.assignManager(warehouseId, request.userId(), assignedBy);
         return toAccessResponse(access);
@@ -202,7 +203,9 @@ public class WarehouseController {
     @DeleteMapping("/{warehouseId}/managers/{userId}")
     public UserWarehouseAccessResponse removeManager(
             @PathVariable String warehouseId,
-            @PathVariable String userId) {
+            @PathVariable String userId,
+            Authentication authentication) {
+        warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         return toAccessResponse(warehouseAccessService.removeManager(warehouseId, userId));
     }
 
@@ -218,7 +221,10 @@ public class WarehouseController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/{warehouseId}/managers")
-    public WarehouseManagersResponse getManagersByWarehouse(@PathVariable String warehouseId) {
+    public WarehouseManagersResponse getManagersByWarehouse(
+            @PathVariable String warehouseId,
+            Authentication authentication) {
+        warehouseAccessAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
         return new WarehouseManagersResponse(
             warehouseId,
             warehouseAccessService.getManagersByWarehouse(warehouseId)

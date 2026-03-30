@@ -101,8 +101,7 @@ public class OrderCancelledHandler implements OrderEventHandler {
     private boolean isCancellable(Status status) {
         return status == Status.RECEIVED
             || status == Status.VALIDATED
-            || status == Status.PICKED
-            || status == Status.PACKED;
+            || status == Status.PICKED;
     }
 
     private Mono<Void> persistCancelled(Order current, String reason) {
