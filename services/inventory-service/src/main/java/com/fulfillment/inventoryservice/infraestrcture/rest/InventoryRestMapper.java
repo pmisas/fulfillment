@@ -4,8 +4,6 @@ import java.util.List;
 
 import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
-import com.fulfillment.inventoryservice.application.dto.ReserveBatchCommand;
-import com.fulfillment.inventoryservice.application.dto.RestockBatchCommand;
 import com.fulfillment.inventoryservice.application.dto.SkuQuantity;
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.BatchRequest;
@@ -17,30 +15,20 @@ public class InventoryRestMapper {
 
     private InventoryRestMapper() {}
 
-    public static RestockBatchCommand toRestockBatchCommand(String warehouseId, BatchRequest req) {
-        return new RestockBatchCommand(
-                warehouseId,
-                req.items().stream()
-                        .map(i -> new SkuQuantity(i.sku(), i.quantity()))
-                        .toList()
-        );
+    public static List<SkuQuantity> toSkuQuantities(BatchRequest req) {
+        return req.items().stream()
+                .map(i -> new SkuQuantity(i.sku(), i.quantity()))
+                .toList();
     }
 
-    public static ReserveBatchCommand toReserveBatchCommand(String warehouseId, ReserveItemsRequest req) {
-        return new ReserveBatchCommand(
-                req.reservationId(),
-                req.orderId(),
-                warehouseId,
-                req.items().stream()
-                        .map(i -> new SkuQuantity(i.sku(), i.quantity()))
-                        .toList()
-        );
+    public static List<SkuQuantity> toSkuQuantities(ReserveItemsRequest req) {
+        return req.items().stream()
+                .map(i -> new SkuQuantity(i.sku(), i.quantity()))
+                .toList();
     }
 
     public static AvailabilityQuery toAvailabilityQuery(String warehouseId, BatchRequest req) {
-        List<SkuQuantity> items = req.items().stream()
-                .map(i -> new SkuQuantity(i.sku(), i.quantity()))
-                .toList();
+        List<SkuQuantity> items = toSkuQuantities(req);
         return new AvailabilityQuery(warehouseId, items);
     }
 

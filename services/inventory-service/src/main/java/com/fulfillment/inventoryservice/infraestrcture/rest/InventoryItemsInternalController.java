@@ -15,8 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
-import com.fulfillment.inventoryservice.application.dto.ConsumeReservationCommand;
-import com.fulfillment.inventoryservice.application.dto.ReserveBatchCommand;
 import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction.ConsumeResult;
 import com.fulfillment.inventoryservice.domain.ports.InventoryReservationTransaction.ReserveResult;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.BatchRequest;
@@ -56,8 +54,12 @@ public class InventoryItemsInternalController {
             @PathVariable String warehouseId,
             @Valid @RequestBody ReserveItemsRequest req) {
 
-        ReserveBatchCommand command = InventoryRestMapper.toReserveBatchCommand(warehouseId, req);
-        ReserveResult result = inventoryService.reserveItems(command);
+        ReserveResult result = inventoryService.reserveItems(
+            req.reservationId(),
+            req.orderId(),
+            warehouseId,
+            InventoryRestMapper.toSkuQuantities(req)
+        );
 
         return switch (result) {
             case RESERVED           -> ResponseEntity.status(HttpStatus.CREATED).build();
@@ -82,9 +84,7 @@ public class InventoryItemsInternalController {
     @PostMapping("/reservations/{reservationId}/consume") 
     public ResponseEntity<Void> consumeReservation(@PathVariable String reservationId) {
 
-        ConsumeResult result = inventoryService.consumeReservation(
-                new ConsumeReservationCommand(reservationId)
-        );
+        ConsumeResult result = inventoryService.consumeReservation(reservationId);
 
         return switch (result) {
             case CONSUMED -> ResponseEntity.noContent().build();

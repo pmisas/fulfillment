@@ -11,9 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
-import com.fulfillment.inventoryservice.application.dto.ConsumeReservationCommand;
-import com.fulfillment.inventoryservice.application.dto.ReserveBatchCommand;
-import com.fulfillment.inventoryservice.application.dto.RestockBatchCommand;
 import com.fulfillment.inventoryservice.application.dto.SkuQuantity;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
@@ -47,7 +44,7 @@ class InventoryItemsServiceImplTest {
     void consumeReservation_shouldDelegateToTransaction() {
         when(reservationTx.consumeAtomically("resv-1")).thenReturn(ConsumeResult.CONSUMED);
 
-        ConsumeResult result = service.consumeReservation(new ConsumeReservationCommand("resv-1"));
+        ConsumeResult result = service.consumeReservation("resv-1");
 
         assertEquals(ConsumeResult.CONSUMED, result);
         verify(reservationTx).consumeAtomically("resv-1");
@@ -55,27 +52,20 @@ class InventoryItemsServiceImplTest {
 
     @Test
     void restockBatch_shouldThrowWhenWarehouseDoesNotExist() {
-        RestockBatchCommand command = new RestockBatchCommand(
-            "wh-404",
-            List.of(new SkuQuantity("SKU-1", 5))
-        );
-
         when(warehouseClient.existsById("wh-404")).thenReturn(false);
 
-        assertThrows(WarehouseNotFoundException.class, () -> service.restockBatch(command));
+        assertThrows(WarehouseNotFoundException.class,
+            () -> service.restockBatch("wh-404", List.of(new SkuQuantity("SKU-1", 5))));
 
         verify(restockTx, never()).restockAtomically(anyString(), anyList());
     }
 
     @Test
     void restockBatch_shouldAggregateQuantitiesBySku() {
-        RestockBatchCommand command = new RestockBatchCommand(
-            "wh-1",
-            List.of(
+        List<SkuQuantity> items = List.of(
                 new SkuQuantity("SKU-1", 5),
                 new SkuQuantity("SKU-1", 3),
                 new SkuQuantity("SKU-2", 2)
-            )
         );
 
         List<InventoryItem> stored = List.of(
@@ -86,7 +76,7 @@ class InventoryItemsServiceImplTest {
         when(warehouseClient.existsById("wh-1")).thenReturn(true);
         when(repo.findByWarehouseId("wh-1")).thenReturn(stored);
 
-        List<InventoryItem> result = service.restockBatch(command);
+        List<InventoryItem> result = service.restockBatch("wh-1", items);
 
         assertEquals(2, result.size());
         verify(restockTx).restockAtomically(eq("wh-1"), anyList());
@@ -171,19 +161,14 @@ class InventoryItemsServiceImplTest {
 
     @Test
     void reserveItems_shouldBuildReservationAndDelegateToTransaction() {
-        ReserveBatchCommand command = new ReserveBatchCommand(
-            "resv-1",
-            "order-1",
-            "wh-1",
-            List.of(
+        List<SkuQuantity> items = List.of(
                 new SkuQuantity("SKU-1", 2),
                 new SkuQuantity("SKU-2", 1)
-            )
         );
 
         when(reservationTx.reserveAtomically(any())).thenReturn(ReserveResult.RESERVED);
 
-        ReserveResult result = service.reserveItems(command);
+        ReserveResult result = service.reserveItems("resv-1", "order-1", "wh-1", items);
 
         assertEquals(ReserveResult.RESERVED, result);
         verify(reservationTx).reserveAtomically(any());
