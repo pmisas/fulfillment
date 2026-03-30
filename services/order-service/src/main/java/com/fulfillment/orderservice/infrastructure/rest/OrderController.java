@@ -109,6 +109,8 @@ public class OrderController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = AsyncOperationResponse.class))),
         @ApiResponse(responseCode = "400", description = "Transición de estado inválida: la orden está en estado SHIPPED y no puede cancelarse",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "403", description = "El operador autenticado no tiene permisos para cancelar esta orden",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Orden no encontrada",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Error interno del servidor",
