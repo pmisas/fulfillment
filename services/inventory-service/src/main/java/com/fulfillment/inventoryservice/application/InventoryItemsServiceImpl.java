@@ -10,8 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.fulfillment.inventoryservice.application.dto.*;
+import com.fulfillment.inventoryservice.application.dto.AvailabilityQuery;
+import com.fulfillment.inventoryservice.application.dto.AvailabilityResult;
 import com.fulfillment.inventoryservice.application.dto.AvailabilityResult.ItemAvailability;
+import com.fulfillment.inventoryservice.application.dto.SkuQuantity;
 import com.fulfillment.inventoryservice.domain.exception.WarehouseNotFoundException;
 import com.fulfillment.inventoryservice.domain.model.InventoryItem;
 import com.fulfillment.inventoryservice.domain.model.InventoryReservation;
@@ -44,19 +46,19 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
     }
 
     @Override
-    public ConsumeResult consumeReservation(ConsumeReservationCommand command) {
-        return reservationTx.consumeAtomically(command.reservationId());
+    public ConsumeResult consumeReservation(String reservationId) {
+        return reservationTx.consumeAtomically(reservationId);
     }
 
     @Override
-    public List<InventoryItem> restockBatch(RestockBatchCommand command) {
+    public List<InventoryItem> restockBatch(String warehouseId, List<SkuQuantity> items) {
      
-        if (!warehouseClient.existsById(command.warehouseId())) {
-            throw new WarehouseNotFoundException(command.warehouseId());
+        if (!warehouseClient.existsById(warehouseId)) {
+            throw new WarehouseNotFoundException(warehouseId);
         }
         
         Map<String, Integer> summed = new HashMap<>();
-        for (var item : command.items()) {
+        for (var item : items) {
             if (item.quantity() <= 0) throw new IllegalArgumentException("quantity must be > 0");
             summed.merge(item.sku(), item.quantity(), Integer::sum);
         }
@@ -65,9 +67,9 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
             .map(e -> new InventoryRestockTransaction.Item(e.getKey(), e.getValue()))
             .toList();
 
-        restockTx.restockAtomically(command.warehouseId(), txItems);
+        restockTx.restockAtomically(warehouseId, txItems);
 
-        return repo.findByWarehouseId(command.warehouseId());
+        return repo.findByWarehouseId(warehouseId);
     }
 
     @Override
@@ -115,16 +117,16 @@ public class InventoryItemsServiceImpl implements InventoryItemsService {
     }
 
     @Override
-    public ReserveResult reserveItems(ReserveBatchCommand command) {
-        List<InventoryReservation.Item> items = command.items().stream()
+    public ReserveResult reserveItems(String reservationId, String orderId, String warehouseId, List<SkuQuantity> items) {
+        List<InventoryReservation.Item> reservationItems = items.stream()
             .map(i -> new InventoryReservation.Item(i.sku(), i.quantity()))
             .toList();
 
         InventoryReservation reservation = InventoryReservation.createInventoryReservation(
-            command.reservationId(),
-            command.orderId(),
-            command.warehouseId(),
-            items
+            reservationId,
+            orderId,
+            warehouseId,
+            reservationItems
         );
 
         return reservationTx.reserveAtomically(reservation);

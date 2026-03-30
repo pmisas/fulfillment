@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.inventoryservice.application.InventoryWarehouseAuthorizationService;
 import com.fulfillment.inventoryservice.application.InventoryItemsService;
-import com.fulfillment.inventoryservice.application.dto.RestockBatchCommand;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.ApiErrorResponse;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.BatchRequest;
 import com.fulfillment.inventoryservice.infraestrcture.rest.dto.InventoryItemResponse;
@@ -74,8 +73,7 @@ public class InventoryItemsController {
 
         inventoryWarehouseAuthorizationService.assertCanAccessWarehouse(authentication, warehouseId);
 
-        RestockBatchCommand command = InventoryRestMapper.toRestockBatchCommand(warehouseId, req);
-        return inventoryService.restockBatch(command).stream()
+        return inventoryService.restockBatch(warehouseId, InventoryRestMapper.toSkuQuantities(req)).stream()
                 .map(InventoryRestMapper::toResponse)
                 .toList();
     }
