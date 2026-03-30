@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fulfillment.shippingservice.application.ShippingService;
-import com.fulfillment.shippingservice.application.dto.CreateShipmentCommand;
 import com.fulfillment.shippingservice.domain.model.CarrierCode;
 import com.fulfillment.shippingservice.domain.model.Shipment;
 import com.fulfillment.shippingservice.infrastructure.rest.dto.request.InternalCreateShipmentRequest;
@@ -34,16 +33,14 @@ public class InternalShippingController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ShipmentResponse createShipment(@Valid @RequestBody InternalCreateShipmentRequest request) {
-        CreateShipmentCommand command = new CreateShipmentCommand(
+        Shipment shipment = shippingService.create(
                 request.orderId(),
                 request.warehouseId(),
                 CarrierCode.INTERNAL_CARRIER,
                 request.items().stream()
-                        .map(i -> new CreateShipmentCommand.Item(i.sku(), i.quantity()))
+                        .map(i -> new ShippingService.ShipmentItemInput(i.sku(), i.quantity()))
                         .toList(),
                 Instant.now().plus(7, ChronoUnit.DAYS));
-
-        Shipment shipment = shippingService.create(command);
         return ShipmentRestMapper.toResponse(shipment);
     }
 }

@@ -58,8 +58,6 @@ public class InventoryItemsInternalController {
         );
     }
 
-    
-
     @PostMapping("/warehouses/{warehouseId}/reservations")
     public ResponseEntity<Void> reserveItems(
             @PathVariable String warehouseId,
