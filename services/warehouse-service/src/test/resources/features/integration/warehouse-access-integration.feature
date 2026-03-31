@@ -9,7 +9,7 @@ Feature: warehouse access integration
 
     Given path '/api/v1/warehouses'
     And headers admin
-    And request { city: 'Medellin Norte', lat: 6.2442, lng: -75.5812 }
+    And request { city: 'Medellin', lat: 6.2442, lng: -75.5812 }
     When method post
     Then status 201
     * def warehouseId = response.warehouseId
@@ -26,7 +26,7 @@ Feature: warehouse access integration
     When method get
     Then status 200
     And match response.warehouseId == warehouseId
-    And match response.city == 'medellin norte'
+    And match response.city == 'medellin'
 
   Scenario: a manager without assignment cannot get the warehouse
     Given path '/api/v1/warehouses', warehouseId
