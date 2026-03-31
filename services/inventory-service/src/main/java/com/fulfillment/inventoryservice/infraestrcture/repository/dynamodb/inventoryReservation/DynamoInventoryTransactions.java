@@ -21,6 +21,7 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.Delete;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.Put;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItem;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
@@ -62,7 +63,7 @@ public class DynamoInventoryTransactions
     @Override
     public ReserveResult reserveAtomically(com.fulfillment.inventoryservice.domain.model.InventoryReservation reservation) {
         List<TransactWriteItem> txItems = new ArrayList<>();
-
+    
         txItems.add(TransactWriteItem.builder()
                 .put(Put.builder()
                         .tableName(reservationTableName)
@@ -70,7 +71,7 @@ public class DynamoInventoryTransactions
                         .conditionExpression("attribute_not_exists(reservationId)")
                         .build())
                 .build());
-
+    
         for (var item : reservation.getItems()) {
             txItems.add(TransactWriteItem.builder()
                     .update(Update.builder()
@@ -80,7 +81,9 @@ public class DynamoInventoryTransactions
                                     "sku", AttributeValue.fromS(item.sku())
                             ))
                             .updateExpression("SET reserved = if_not_exists(reserved, :zero) + :qty")
-                            .conditionExpression("attribute_exists(warehouseId)")
+                            .conditionExpression(
+                                    "attribute_exists(warehouseId) AND quantity >= if_not_exists(reserved, :zero) + :qty"
+                            )
                             .expressionAttributeValues(Map.of(
                                     ":qty", AttributeValue.fromN(String.valueOf(item.quantity())),
                                     ":zero", AttributeValue.fromN("0")
@@ -88,18 +91,22 @@ public class DynamoInventoryTransactions
                             .build())
                     .build());
         }
-
+    
         try {
             ddbClient.transactWriteItems(
                     TransactWriteItemsRequest.builder().transactItems(txItems).build());
             return ReserveResult.RESERVED;
-
+            
         } catch (TransactionCanceledException e) {
-            boolean reservationExists = e.cancellationReasons() != null
+            boolean reservationAlreadyExists = e.cancellationReasons() != null
                     && e.cancellationReasons().size() > RESERVATION_CONDITION_INDEX
                     && "ConditionalCheckFailed".equals(e.cancellationReasons().get(RESERVATION_CONDITION_INDEX).code());
-
-            return reservationExists ? ReserveResult.ALREADY_RESERVED : ReserveResult.INSUFFICIENT_STOCK;
+    
+            if (reservationAlreadyExists) {
+                return ReserveResult.ALREADY_RESERVED;
+            }
+    
+            return ReserveResult.INSUFFICIENT_STOCK;
         }
     }
 
@@ -160,8 +167,8 @@ public class DynamoInventoryTransactions
             log.error("Cancellation reasons: {}", e.cancellationReasons());
             log.error("Full exception: ", e);
             throw new IllegalStateException("Failed to release reservation due to transaction cancellation: " + reservationId, e);
-        } catch (Exception e) {
-            log.error("UNEXPECTED error while releasing reservation: reservationId={}, errorType={}, message={}", 
+        } catch (DynamoDbException e) {
+            log.error("DynamoDB error while releasing reservation: reservationId={}, errorType={}, message={}", 
                       reservationId, e.getClass().getSimpleName(), e.getMessage());
             log.error("Full exception: ", e);
             throw new IllegalStateException("Failed to release reservation: " + reservationId, e);

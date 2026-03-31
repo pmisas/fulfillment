@@ -4,8 +4,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-import com.fulfillment.orderservice.domain.exception.InvalidStatusTransitionException;
-
 import static com.fulfillment.orderservice.domain.shared.DomainValidations.requireNonBlank;
 
 import lombok.Getter;
@@ -68,37 +66,6 @@ public class Order {
         );
     }  
 
-    public Order withStatus(Status newStatus) {
-        if (!this.status.canTransitionTo(newStatus)) {
-            throw new InvalidStatusTransitionException(this.status, newStatus);
-        }
-        return new Order(
-            this.orderId,
-            this.operatorId,
-            this.warehouseId,
-            Objects.requireNonNull(newStatus),
-            this.createdAt,
-            Instant.now(),
-            this.lat,
-            this.lng,
-            this.items
-        );
-    }
-
-    public Order withWarehouse(String warehouseId) {
-        return new Order(
-            this.orderId,
-            this.operatorId,
-            warehouseId,
-            this.status,
-            this.createdAt,
-            Instant.now(),
-            this.lat,
-            this.lng,
-            this.items
-        ); 
-    }
-    
     public static Order restore(
             String orderId,
             String operatorId,
@@ -111,10 +78,6 @@ public class Order {
             List<OrderItem> items) {
         return new Order(
             orderId, operatorId, warehouseId, status, createdAt, updatedAt, lat, lng, items);
-    }
-
-    public Order cancel() {
-        return this.withStatus(Status.CANCELED);
     }
 
 }

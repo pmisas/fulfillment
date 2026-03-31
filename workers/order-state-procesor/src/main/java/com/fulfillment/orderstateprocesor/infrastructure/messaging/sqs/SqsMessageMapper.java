@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderstateprocesor.application.dto.ProcessEventCommand;
@@ -76,7 +77,7 @@ public class SqsMessageMapper {
 
             return new ProcessEventCommand(eventId, "UNKNOWN", msg.body());
 
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException(
                 "Could not map SQS messageId=" + msg.messageId() + ": " + e.getMessage(), e
             );

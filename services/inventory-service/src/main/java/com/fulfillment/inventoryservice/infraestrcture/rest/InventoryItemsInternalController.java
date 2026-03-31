@@ -81,13 +81,8 @@ public class InventoryItemsInternalController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void releaseReservation(@PathVariable String reservationId) {
         log.info("DELETE /internal/v1/reservations/{} - Starting release", reservationId);
-        try {
-            inventoryService.releaseReservation(reservationId);
-            log.info("DELETE /internal/v1/reservations/{} - Completed successfully", reservationId);
-        } catch (Exception e) {
-            log.error("DELETE /internal/v1/reservations/{} - FAILED: {}", reservationId, e.getMessage(), e);
-            throw e;
-        }
+        inventoryService.releaseReservation(reservationId);
+        log.info("DELETE /internal/v1/reservations/{} - Completed successfully", reservationId);
     }
 
     @PostMapping("/reservations/{reservationId}/consume") 
