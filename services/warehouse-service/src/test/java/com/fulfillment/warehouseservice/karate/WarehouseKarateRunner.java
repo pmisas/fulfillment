@@ -6,6 +6,6 @@ class WarehouseKarateRunner {
 
     @Karate.Test
     Karate runAll() {
-        return Karate.run("classpath:features/warehouse").relativeTo(getClass());
+        return Karate.run("classpath:features/integration");
     }
 }
