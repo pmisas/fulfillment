@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderstateprocesor.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderstateprocesor.domain.model.Order;
@@ -116,7 +117,7 @@ public class OrderPackedHandler implements OrderEventHandler {
     private WarehouseOrderActionEvent parse(String json) {
         try {
             return mapper.readValue(json, WarehouseOrderActionEvent.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Invalid PackingStarted payload: " + e.getMessage(), e);
         }
     }

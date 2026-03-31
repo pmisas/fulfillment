@@ -1,5 +1,8 @@
 package com.fulfillment.inventoryservice.domain.model;
 
+import lombok.Getter;
+
+@Getter
 public class WarehouseAccess {
 
     private final String userId;
@@ -14,14 +17,6 @@ public class WarehouseAccess {
 
     public static WarehouseAccess restore(String userId, String warehouseId, boolean active) {
         return new WarehouseAccess(userId, warehouseId, active);
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public String getWarehouseId() {
-        return warehouseId;
     }
 
     public boolean isActive() {

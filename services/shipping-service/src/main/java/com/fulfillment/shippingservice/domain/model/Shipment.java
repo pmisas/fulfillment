@@ -1,12 +1,11 @@
 package com.fulfillment.shippingservice.domain.model;
 
-import static com.fulfillment.shippingservice.domain.shared.DomainValidations.requireNonBlank;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
 import com.fulfillment.shippingservice.domain.exception.InvalidStatusTransitionException;
+import static com.fulfillment.shippingservice.domain.shared.DomainValidations.requireNonBlank;
 
 import lombok.Getter;
 
@@ -103,21 +102,6 @@ public class Shipment {
                 shippedAt,
                 estimatedDeliveryAt,
                 shippingGuideS3Key);
-    }
-
-    public Shipment withTrackingId(String trackingId) {
-        return new Shipment(
-                this.shipmentId,
-                this.orderId,
-                this.warehouseId,
-                this.carrier,
-                this.status,
-                requireNonBlank(trackingId, "trackingId"),
-                this.items,
-                this.createdAt,
-                this.shippedAt,
-                this.estimatedDeliveryAt,
-                this.shippingGuideS3Key);
     }
 
     public Shipment withStatus(ShipmentStatus newStatus) {

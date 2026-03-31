@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fulfillment.orderstateprocesor.domain.exception.OrderNotFoundException;
 import com.fulfillment.orderstateprocesor.domain.model.Order;
@@ -81,7 +82,7 @@ public class OrderDeliveredHandler implements OrderEventHandler {
     private ShipmentDeliveredEvent parse(String json) {
         try {
             return mapper.readValue(json, ShipmentDeliveredEvent.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Invalid ShipmentDelivered payload: " + e.getMessage(), e);
         }
     }

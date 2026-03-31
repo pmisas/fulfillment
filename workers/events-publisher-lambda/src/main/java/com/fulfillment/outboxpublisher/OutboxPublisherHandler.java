@@ -12,6 +12,9 @@ import software.amazon.awssdk.services.sns.model.*;
 import java.time.Instant;
 import java.util.*;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+
 public class OutboxPublisherHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_PROCESSING = "PROCESSING";
@@ -42,15 +45,7 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
         this.sns = SnsClient.builder().region(region).build();
     }
 
-    OutboxPublisherHandler(String tableName, String gsiName, String topicArn, int maxBatch,
-                           DynamoDbClient dynamo, SnsClient sns) {
-        this.tableName = tableName;
-        this.gsiName   = gsiName;
-        this.topicArn  = topicArn;
-        this.maxBatch  = maxBatch;
-        this.dynamo    = dynamo;
-        this.sns       = sns;
-    }
+    
 
     @Override
     public Map<String, Object> handleRequest(Map<String, Object> input, Context context) {
@@ -259,7 +254,7 @@ public class OutboxPublisherHandler implements RequestHandler<Map<String, Object
                     .build();
 
             dynamo.updateItem(req);
-        } catch (Exception ignored) {
+        } catch (AwsServiceException | SdkClientException ignored) {
         }
     }
 

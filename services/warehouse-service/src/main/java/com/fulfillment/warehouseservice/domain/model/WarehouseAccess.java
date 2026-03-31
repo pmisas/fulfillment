@@ -4,6 +4,9 @@ import java.time.Instant;
 
 import static com.fulfillment.warehouseservice.domain.shared.DomainValidations.requireNonBlank;
 
+import lombok.Getter;
+
+@Getter
 public class WarehouseAccess {
 
     private final String userId;
@@ -75,27 +78,8 @@ public class WarehouseAccess {
         return value.trim();
     }
 
-    public String getUserId() {
-        return userId;
-    }
-
-    public String getWarehouseId() {
-        return warehouseId;
-    }
-
     public boolean isActive() {
         return active;
     }
 
-    public Instant getAssignedAt() {
-        return assignedAt;
-    }
-
-    public String getAssignedBy() {
-        return assignedBy;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
 }
