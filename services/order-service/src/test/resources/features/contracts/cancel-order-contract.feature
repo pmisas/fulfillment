@@ -4,6 +4,7 @@ Feature: cancel order contract
   Background:
     * def operatorAToken = tokenOperatorA
     * def operatorBToken = tokenOperatorB
+
     * def createOrderRequestContract =
     """
     {
@@ -12,6 +13,7 @@ Feature: cancel order contract
       items: '#[] ##object'
     }
     """
+
     * def orderItemContract =
     """
     {
@@ -19,6 +21,7 @@ Feature: cancel order contract
       quantity: '#number'
     }
     """
+
     * def cancelOrderResponseContract =
     """
     {
@@ -27,6 +30,17 @@ Feature: cancel order contract
       status: 'PROCESSING'
     }
     """
+
+    * def apiErrorResponseContract =
+    """
+    {
+      status: '#number',
+      error: '#string',
+      message: '#string',
+      fields: '##[] ##object'
+    }
+    """
+
     * def orderNotFoundContract =
     """
     {
@@ -36,6 +50,7 @@ Feature: cancel order contract
       fields: null
     }
     """
+
     * def orderAccessDeniedContract =
     """
     {
@@ -45,6 +60,7 @@ Feature: cancel order contract
       fields: null
     }
     """
+
     * def invalidStatusTransitionContract =
     """
     {
@@ -77,6 +93,8 @@ Feature: cancel order contract
     And request payload
     When method post
     Then status 201
+    And match response.orderId == '#string'
+    And match response.status == '#string'
     * def createdOrderId = response.orderId
 
     Given url baseUrl
@@ -94,7 +112,7 @@ Feature: cancel order contract
     When method post
     Then status 404
     And match response == orderNotFoundContract
- 
+
   Scenario: cancel order owned by another operator returns the published 403 error contract
     * def idemKey = 'idem-' + java.util.UUID.randomUUID()
     * def payload =
@@ -117,6 +135,7 @@ Feature: cancel order contract
     And request payload
     When method post
     Then status 201
+    And match response.orderId == '#string'
     * def createdOrderId = response.orderId
 
     Given url baseUrl
@@ -126,5 +145,4 @@ Feature: cancel order contract
     Then status 403
     And match response == orderAccessDeniedContract
 
-  //TODO probar  cancelar orden en estado no cancelable
-
+  # TODO: add scenario for 400 INVALID_STATUS_TRANSITION with an order in a non-cancelable state

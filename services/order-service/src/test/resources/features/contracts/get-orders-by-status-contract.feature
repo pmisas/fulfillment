@@ -40,6 +40,8 @@ Feature: get orders by status contract
     And request createPayload
     When method post
     Then status 201
+    And match response.orderId == '#string'
+    And match response.status == '#string'
 
     Given url baseUrl
     And path '/api/v1/orders/by-status/RECEIVED'
@@ -47,7 +49,7 @@ Feature: get orders by status contract
     When method get
     Then status 200
     And match response == '#[]'
-    And match each response contains orderResponseContract
+    And match each response == orderResponseContract
 
   Scenario: returns 400 with ApiErrorResponse when the status is invalid
     Given url baseUrl
