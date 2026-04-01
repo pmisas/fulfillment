@@ -25,7 +25,7 @@ Feature: get my orders contract
     {
       status: 400,
       error: 'BAD_REQUEST',
-      message: '#string',
+      message: 'Cannot filter by both status and warehouseId simultaneously',
       fields: null
     }
     """
@@ -40,6 +40,8 @@ Feature: get my orders contract
     And request createPayload
     When method post
     Then status 201
+    And match response.orderId == '#string'
+    And match response.status == '#string'
     * def createdOrderId = response.orderId
 
     Given url baseUrl
@@ -48,7 +50,7 @@ Feature: get my orders contract
     When method get
     Then status 200
     And match response == '#[]'
-    And match each response contains orderResponseContract
+    And match each response == orderResponseContract
     And match response[*].orderId contains createdOrderId
 
   Scenario: returns 400 with ApiErrorResponse when status and warehouseId are sent together

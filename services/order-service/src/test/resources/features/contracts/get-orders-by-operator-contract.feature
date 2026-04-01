@@ -4,6 +4,7 @@ Feature: get orders by operator contract
   Background:
     * def operatorAToken = tokenOperatorA
     * def adminToken = tokenAdmin
+
     * def orderResponseContract =
     """
     {
@@ -11,6 +12,7 @@ Feature: get orders by operator contract
       status: '#string'
     }
     """
+
     * def accessDeniedContract =
     """
     {
@@ -28,7 +30,7 @@ Feature: get orders by operator contract
     When method get
     Then status 200
     And match response == '#[]'
-    And match each response contains orderResponseContract
+    And match each response == orderResponseContract
 
   Scenario: returns 403 with ApiErrorResponse for non-admin users
     Given url baseUrl

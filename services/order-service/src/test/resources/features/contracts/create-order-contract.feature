@@ -3,6 +3,7 @@ Feature: create order contract
 
   Background:
     * def operatorAToken = tokenOperatorA
+
     * def createOrderRequestContract =
     """
     {
@@ -11,13 +12,15 @@ Feature: create order contract
       items: '#[] ##object'
     }
     """
-    * def orderItemContract =
+
+    * def validOrderItemContract =
     """
     {
       sku: '#string',
       quantity: '#number'
     }
     """
+
     * def orderResponseContract =
     """
     {
@@ -25,15 +28,25 @@ Feature: create order contract
       status: '#string'
     }
     """
+
+    * def fieldViolationContract =
+    """
+    {
+      field: '#string',
+      message: '#string'
+    }
+    """
+
     * def validationErrorContract =
     """
     {
       status: 400,
       error: 'VALIDATION_ERROR',
-      message: '#string',
+      message: 'El request tiene campos inválidos.',
       fields: '#[] ##object'
     }
     """
+
     * def conflictErrorContract =
     """
     {
@@ -57,7 +70,7 @@ Feature: create order contract
     }
     """
     * match payload == createOrderRequestContract
-    * match each payload.items == orderItemContract
+    * match each payload.items == validOrderItemContract
 
     Given url baseUrl
     And path '/api/v1/orders'
@@ -81,7 +94,6 @@ Feature: create order contract
     }
     """
     * match payload == createOrderRequestContract
-    * match each payload.items == orderItemContract
 
     Given url baseUrl
     And path '/api/v1/orders'
@@ -91,6 +103,7 @@ Feature: create order contract
     When method post
     Then status 400
     And match response == validationErrorContract
+    And match each response.fields == fieldViolationContract
 
   Scenario: returns 409 with ApiErrorResponse when the idempotency key conflicts
     * def idemKey = 'idem-fixed-key'
@@ -104,6 +117,8 @@ Feature: create order contract
       ]
     }
     """
+    * match payload == createOrderRequestContract
+    * match each payload.items == validOrderItemContract
 
     Given url baseUrl
     And path '/api/v1/orders'
