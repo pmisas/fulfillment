@@ -1,11 +1,11 @@
-package com.fulfillment.warehouseservice.karate;
+package com.fulfillment.orderservice.karate;
 
 import com.intuit.karate.junit5.Karate;
 
-class WarehouseKarateRunner {
+class OrderIntegrationKarateRunner {
 
     @Karate.Test
-    Karate runAll() {
+    Karate runIntegration() {
         return Karate.run("classpath:features/integration");
     }
 }
