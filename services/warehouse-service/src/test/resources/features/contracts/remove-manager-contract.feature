@@ -19,8 +19,10 @@ Feature: remove manager contract
     * def apiErrorResponseContract =
     """
     {
+      status: '#number',
       error: '#string',
-      message: '#string'
+      message: '#string',
+      fields: '##[] ##object'
     }
     """
 
@@ -39,6 +41,7 @@ Feature: remove manager contract
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     * def payload =
@@ -69,10 +72,14 @@ Feature: remove manager contract
     When method delete
     Then status 403
     And match response == apiErrorResponseContract
+    And match response.status == 403
+    And match response.error == 'FORBIDDEN'
 
-  Scenario: returns 404 when assignment or warehouse does not exist
-    Given path '/api/v1/warehouses', 'warehouse-not-found', 'managers', 'user-not-found'
+  Scenario: returns 404 when warehouse does not exist
+    Given path '/api/v1/warehouses', 'warehouse-not-found', 'managers', 'warehouse-manager-1'
     And header Authorization = 'Bearer ' + adminToken
     When method delete
     Then status 404
     And match response == apiErrorResponseContract
+    And match response.status == 404
+    And match response.error == 'WAREHOUSE_NOT_FOUND'
