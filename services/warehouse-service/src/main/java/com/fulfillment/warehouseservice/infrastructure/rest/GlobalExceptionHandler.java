@@ -46,6 +46,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
+    //409
     @ExceptionHandler(WarehouseManagerAssignmentConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleConflict(
             WarehouseManagerAssignmentConflictException ex, HttpServletRequest request) {
@@ -55,6 +56,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
+    //403
     @ExceptionHandler({WarehouseAccessDeniedException.class, UserRoleNotAllowedException.class, AccessDeniedException.class})
     public ResponseEntity<ApiErrorResponse> handleForbidden(
             Exception ex, HttpServletRequest request) {
@@ -64,6 +66,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
+    //400
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleDtoValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -76,6 +79,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
+    //400
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArg(
             IllegalArgumentException ex, HttpServletRequest request) {

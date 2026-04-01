@@ -17,8 +17,10 @@ Feature: get warehouse by id contract
     * def apiErrorResponseContract =
     """
     {
+      status: '#number',
       error: '#string',
-      message: '#string'
+      message: '#string',
+      fields: '##[] ##object'
     }
     """
 
@@ -37,6 +39,7 @@ Feature: get warehouse by id contract
     And request createPayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId
@@ -61,6 +64,7 @@ Feature: get warehouse by id contract
     And request createPayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId
@@ -68,6 +72,8 @@ Feature: get warehouse by id contract
     When method get
     Then status 403
     And match response == apiErrorResponseContract
+    And match response.status == 403
+    And match response.error == 'FORBIDDEN'
 
   Scenario: returns 404 when warehouse does not exist
     Given path '/api/v1/warehouses', 'warehouse-not-found'
@@ -75,4 +81,5 @@ Feature: get warehouse by id contract
     When method get
     Then status 404
     And match response == apiErrorResponseContract
-    
+    And match response.status == 404
+    And match response.error == 'WAREHOUSE_NOT_FOUND'

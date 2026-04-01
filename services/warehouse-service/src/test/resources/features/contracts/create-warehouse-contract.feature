@@ -26,8 +26,10 @@ Feature: create warehouse contract
     * def apiErrorResponseContract =
     """
     {
+      status: '#number',
       error: '#string',
-      message: '#string'
+      message: '#string',
+      fields: '##[] ##object'
     }
     """
 
@@ -68,6 +70,8 @@ Feature: create warehouse contract
     When method post
     Then status 400
     And match response == apiErrorResponseContract
+    And match response.error == 'VALIDATION_ERROR'
+    And match response.message == 'El request tiene campos inválidos.'
 
   Scenario: returns 403 when user is not allowed to create warehouses
     * def payload =
@@ -86,4 +90,5 @@ Feature: create warehouse contract
     When method post
     Then status 403
     And match response == apiErrorResponseContract
+    And match response.error == 'FORBIDDEN'
     

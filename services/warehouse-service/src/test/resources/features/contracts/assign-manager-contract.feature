@@ -26,8 +26,10 @@ Feature: assign manager contract
     * def apiErrorResponseContract =
     """
     {
+      status: '#number',
       error: '#string',
-      message: '#string'
+      message: '#string',
+      fields: '##[] ##object'
     }
     """
 
@@ -89,6 +91,9 @@ Feature: assign manager contract
     When method post
     Then status 400
     And match response == apiErrorResponseContract
+    And match response.status == 400
+    And match response.error == 'VALIDATION_ERROR'
+    And match response.message == 'El request tiene campos inválidos.'
 
   Scenario: returns 403 when user is not allowed to assign managers
     * def createWarehousePayload =
@@ -121,6 +126,8 @@ Feature: assign manager contract
     When method post
     Then status 403
     And match response == apiErrorResponseContract
+    And match response.status == 403
+    And match response.error == 'FORBIDDEN'
 
   Scenario: returns 404 when warehouse or user does not exist
     * def payload =
@@ -137,7 +144,10 @@ Feature: assign manager contract
     When method post
     Then status 404
     And match response == apiErrorResponseContract
-      Scenario: returns 409 when active manager assignment already exists
+    And match response.status == 404
+    And match response.error == 'WAREHOUSE_NOT_FOUND'
+
+  Scenario: returns 409 when active manager assignment already exists
     * def createWarehousePayload =
     """
     {
@@ -160,6 +170,7 @@ Feature: assign manager contract
       "userId": "warehouse-manager-1"
     }
     """
+    * match payload == assignWarehouseManagerRequestContract
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'
     And header Authorization = 'Bearer ' + adminToken
@@ -173,3 +184,5 @@ Feature: assign manager contract
     When method post
     Then status 409
     And match response == apiErrorResponseContract
+    And match response.status == 409
+    And match response.error == 'WAREHOUSE_ASSIGNMENT_CONFLICT'
