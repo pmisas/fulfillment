@@ -1,8 +1,8 @@
-package com.fulfillment.orderservice.karate;
+package com.fulfillment.warehouseservice.karate;
 
 import com.intuit.karate.junit5.Karate;
 
-class OrderContractKarateRunner {
+class WarehouseContractKarateRunner {
 
     @Karate.Test
     Karate runContracts() {
