@@ -35,6 +35,7 @@ Feature: release reservation contract
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'

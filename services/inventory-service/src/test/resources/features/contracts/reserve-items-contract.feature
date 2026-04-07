@@ -17,7 +17,35 @@ Feature: reserve items contract
     """
     {
       sku: '#string',
-      quantity: '#number'
+      quantity: '#? _ >= 1'
+    }
+    """
+
+    * def fieldViolationContract =
+    """
+    {
+      field: '#string',
+      message: '#string'
+    }
+    """
+
+    * def validationErrorContract =
+    """
+    {
+      status: 400,
+      error: 'VALIDATION_ERROR',
+      message: 'El request tiene campos inválidos.',
+      fields: '#[] ##object'
+    }
+    """
+
+    * def insufficientAvailableStockContract =
+    """
+    {
+      status: 422,
+      error: 'INSUFFICIENT_AVAILABLE_STOCK',
+      message: '#string',
+      fields: null
     }
     """
 
@@ -65,6 +93,7 @@ Feature: reserve items contract
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'
@@ -128,6 +157,7 @@ Feature: reserve items contract
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'
@@ -151,6 +181,25 @@ Feature: reserve items contract
     And request payload
     When method post
     Then status 200
+
+  Scenario: returns 400 when request payload is invalid
+    * def payload =
+    """
+    {
+      "reservationId": "",
+      "orderId": "order-1",
+      "items": [
+        { "sku": "SKU-1", "quantity": 0 }
+      ]
+    }
+    """
+
+    Given path '/internal/v1/warehouses', 'warehouse-001', 'reservations'
+    And request payload
+    When method post
+    Then status 400
+    And match response == validationErrorContract
+    And match each response.fields == fieldViolationContract
 
   Scenario: returns 422 when stock is insufficient
     * def createWarehousePayload =
@@ -196,6 +245,7 @@ Feature: reserve items contract
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'
@@ -214,3 +264,4 @@ Feature: reserve items contract
     And request payload
     When method post
     Then status 422
+    And match response == insufficientAvailableStockContract
