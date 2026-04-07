@@ -3,15 +3,13 @@ Feature: inventory reservation lifecycle integration
 
   Background:
     * url baseUrl
-    * def admin = adminToken
-    * def manager = warehouseManagerToken
 
     * def createWarehousePayload =
     """
     {
-      "city": "Medellin",
-      "lat": 6.2442,
-      "lng": -75.5812
+      "city": "Pereira",
+      "lat": 4.8143,
+      "lng": -75.6946
     }
     """
 
@@ -31,22 +29,23 @@ Feature: inventory reservation lifecycle integration
     }
     """
 
-  Scenario: reserve and consume inventory successfully
+  Scenario: reservation can be consumed successfully
     Given path '/api/v1/warehouses'
-    And header Authorization = 'Bearer ' + admin
+    And headers adminHeaders
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'
-    And header Authorization = 'Bearer ' + admin
+    And headers adminHeaders
     And request assignManagerPayload
     When method post
     Then status 201
 
     Given path '/api/v1/warehouses', warehouseId, 'inventory', 'restock'
-    And header Authorization = 'Bearer ' + manager
+    And headers managerHeaders
     And request restockPayload
     When method post
     Then status 200
@@ -72,27 +71,23 @@ Feature: inventory reservation lifecycle integration
     When method post
     Then status 204
 
-  Scenario: consume reservation returns 404 when reservation does not exist
-    Given path '/internal/v1/reservations', 'reservation-not-found', 'consume'
-    When method post
-    Then status 404
-
-  Scenario: reserve and release inventory successfully
+  Scenario: reservation can be released successfully
     Given path '/api/v1/warehouses'
-    And header Authorization = 'Bearer ' + admin
+    And headers adminHeaders
     And request createWarehousePayload
     When method post
     Then status 201
+    And match response.warehouseId == '#string'
     * def warehouseId = response.warehouseId
 
     Given path '/api/v1/warehouses', warehouseId, 'managers'
-    And header Authorization = 'Bearer ' + admin
+    And headers adminHeaders
     And request assignManagerPayload
     When method post
     Then status 201
 
     Given path '/api/v1/warehouses', warehouseId, 'inventory', 'restock'
-    And header Authorization = 'Bearer ' + manager
+    And headers managerHeaders
     And request restockPayload
     When method post
     Then status 200
@@ -117,3 +112,8 @@ Feature: inventory reservation lifecycle integration
     Given path '/internal/v1/reservations', reservationId
     When method delete
     Then status 204
+
+  Scenario: consuming a non-existent reservation returns 404
+    Given path '/internal/v1/reservations', 'reservation-not-found', 'consume'
+    When method post
+    Then status 404

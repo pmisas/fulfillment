@@ -15,7 +15,7 @@ Feature: check inventory availability contract
     """
     {
       sku: '#string',
-      quantity: '#number'
+      quantity: '#? _ >= 1'
     }
     """
 
