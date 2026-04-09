@@ -6,8 +6,25 @@ target/
 *.ear
 *.log
 
-# VS COde
+# VS Code
 .vscode/
 
 # Windows
 Thumbs.db
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Terraform local binary
+terraform.exe
+
+# Local secrets/helpers
+aws-env.sh
+.env
