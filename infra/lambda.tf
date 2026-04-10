@@ -25,3 +25,29 @@ resource "aws_lambda_function" "events_publisher" {
     }
   }
 }
+
+resource "aws_lambda_function" "notification_lambda" {
+  function_name = "notificationLambda"
+  role          = "arn:aws:iam::029643846829:role/lambdaFunction-role-cpl9krj0"
+  handler       = "com.fulfillment.notificationlambda.NotificationHandler::handleRequest"
+  runtime       = "java17"
+
+  s3_bucket = "fulfillment-lambda-artifacts"
+  s3_key    = "lambdas/notification-lambda/notification-lambda.jar"
+
+  memory_size = 512
+  timeout     = 15
+
+  architectures = ["x86_64"]
+
+  ephemeral_storage {
+    size = 512
+  }
+
+  environment {
+    variables = {
+      COGNITO_USER_POOL_ID = "us-east-1_uNLRWeBsi"
+      SES_FROM_EMAIL       = "fulfillmentAWS@gmail.com"
+    }
+  }
+}

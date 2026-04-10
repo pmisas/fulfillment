@@ -2,7 +2,7 @@ package com.fulfillment.orderservice.karate;
 
 import com.intuit.karate.junit5.Karate;
 
-class OrderContractKarateRunner {
+class OrderContractKarateRunnerTest {
 
     @Karate.Test
     Karate runContracts() {
