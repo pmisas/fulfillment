@@ -28,3 +28,7 @@ terraform.exe
 # Local secrets/helpers
 aws-env.sh
 .env
+
+# Old E2E drafts. Safe to delete locally when Windows/OneDrive allows it.
+/e2e-java/
+/e2e-simple/
