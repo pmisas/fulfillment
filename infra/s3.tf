@@ -1,7 +1,10 @@
 resource "aws_s3_bucket" "shipping_guides" {
-  bucket = var.shipping_guides_bucket_name
+  bucket        = var.shipping_guides_bucket_name
+  force_destroy = false
 
-  tags = local.common_tags
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "shipping_guides" {
@@ -17,16 +20,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "shipping_guides" 
   bucket = aws_s3_bucket.shipping_guides.id
 
   rule {
+    bucket_key_enabled = true
+
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
-  }
-}
-
-resource "aws_s3_bucket_versioning" "shipping_guides" {
-  bucket = aws_s3_bucket.shipping_guides.id
-
-  versioning_configuration {
-    status = "Enabled"
   }
 }

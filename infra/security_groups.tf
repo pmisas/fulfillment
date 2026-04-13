@@ -1,123 +1,111 @@
-resource "aws_security_group" "api_services" {
+resource "aws_security_group" "order_state_worker" {
   count = var.vpc_id == "" ? 0 : 1
 
-  name        = "fulfillment-api-services-sg"
-  description = "Ingress for public fulfillment Spring APIs on EC2"
+  name        = "order-state-worker-sg"
+  description = "permite acceso a instancia worker"
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "order-service"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = var.public_http_cidr_blocks
+    cidr_blocks = ["0.0.0.0/0"]
+    description = ""
   }
 
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = ""
+  }
+
+  tags = {
+    Name = "order-state-worker-sg"
+  }
+
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
+}
+
+resource "aws_security_group" "inventory_warehouse" {
+  count = var.vpc_id == "" ? 0 : 1
+
+  name        = "inventory-warehouse.sg"
+  description = "inventory and warehouse service sg"
+  vpc_id      = var.vpc_id
+
   ingress {
-    description = "warehouse-service"
     from_port   = 8081
     to_port     = 8081
     protocol    = "tcp"
-    cidr_blocks = var.public_http_cidr_blocks
+    cidr_blocks = ["0.0.0.0/0"]
+    description = ""
   }
 
   ingress {
-    description = "inventory-service"
     from_port   = 8082
     to_port     = 8082
     protocol    = "tcp"
-    cidr_blocks = var.public_http_cidr_blocks
+    cidr_blocks = ["0.0.0.0/0"]
+    description = ""
   }
 
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = ""
+  }
+
+  tags = {
+    Name = "inventory-warehouse.sg"
+  }
+
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
+}
+
+resource "aws_security_group" "shipping" {
+  count = var.vpc_id == "" ? 0 : 1
+
+  name        = "shipping-sg"
+  description = "Security group for Shipping Service EC2 instances"
+  vpc_id      = var.vpc_id
+
   ingress {
-    description = "shipping-service"
     from_port   = 8083
     to_port     = 8083
     protocol    = "tcp"
-    cidr_blocks = var.public_http_cidr_blocks
-  }
-
-  dynamic "ingress" {
-    for_each = length(var.ssh_cidr_blocks) == 0 ? [] : [1]
-
-    content {
-      description = "SSH admin access"
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = var.ssh_cidr_blocks
-    }
-  }
-
-  egress {
-    description = "All outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = ""
   }
-
-  tags = merge(local.common_tags, {
-    Name = "fulfillment-api-services-sg"
-  })
-}
-
-resource "aws_security_group" "worker" {
-  count = var.vpc_id == "" ? 0 : 1
-
-  name        = "fulfillment-worker-sg"
-  description = "Outbound-only access for background workers on EC2"
-  vpc_id      = var.vpc_id
-
-  dynamic "ingress" {
-    for_each = length(var.ssh_cidr_blocks) == 0 ? [] : [1]
-
-    content {
-      description = "SSH admin access"
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = var.ssh_cidr_blocks
-    }
-  }
-
-  egress {
-    description = "All outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "fulfillment-worker-sg"
-  })
-}
-
-resource "aws_security_group" "redis" {
-  count = var.vpc_id == "" ? 0 : 1
-
-  name        = "fulfillment-redis-sg"
-  description = "Redis access from fulfillment API services"
-  vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Redis from API services"
-    from_port       = 6379
-    to_port         = 6379
+    from_port       = 8083
+    to_port         = 8083
     protocol        = "tcp"
-    security_groups = [aws_security_group.api_services[0].id]
+    security_groups = [aws_security_group.order_state_worker[0].id]
+    description     = ""
   }
 
   egress {
-    description = "All outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = ""
   }
 
-  tags = merge(local.common_tags, {
-    Name = "fulfillment-redis-sg"
-  })
+  tags = {
+    Name = "shipping-sg"
+  }
+
+  lifecycle {
+    ignore_changes = [tags, tags_all, ingress]
+  }
 }

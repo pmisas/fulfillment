@@ -30,7 +30,12 @@ variable "shipping_guides_bucket_name" {
 
 variable "outbox_publisher_schedule_expression" {
   type    = string
-  default = "rate(1 minute)"
+  default = "cron(*/59 * * * ? *)"
+}
+
+variable "scheduler_role_arn" {
+  type        = string
+  description = "ARN del rol que usa EventBridge Scheduler para invocar la Lambda."
 }
 
 variable "cognito_user_pool_id" {
@@ -62,3 +67,4 @@ variable "ssh_cidr_blocks" {
   type    = list(string)
   default = []
 }
+

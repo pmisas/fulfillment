@@ -27,14 +27,19 @@ resource "aws_lambda_function" "events_publisher" {
 
   tags = local.common_tags
 
-  depends_on = [
-    aws_iam_role_policy_attachment.events_publisher_basic_execution,
-    aws_iam_role_policy_attachment.events_publisher
-  ]
+  lifecycle {
+    ignore_changes = [
+      tags,
+      tags_all,
+      publish,
+      s3_bucket,
+      s3_key
+    ]
+  }
 }
 
 resource "aws_lambda_function" "notification" {
-  function_name = "NotificationLambda"
+  function_name = "notificationLambda"
   role          = aws_iam_role.notification_lambda.arn
   handler       = "com.fulfillment.notificationlambda.NotificationHandler::handleRequest"
   runtime       = "java17"
@@ -43,7 +48,7 @@ resource "aws_lambda_function" "notification" {
   s3_key    = var.notification_lambda_s3_key
 
   memory_size = 512
-  timeout     = 30
+  timeout     = 15
 
   architectures = ["x86_64"]
 
@@ -53,24 +58,30 @@ resource "aws_lambda_function" "notification" {
 
   environment {
     variables = {
-      AWS_REGION           = var.aws_region
-      COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-      ORDERS_TABLE         = aws_dynamodb_table.orders.name
-      SES_FROM_EMAIL       = var.ses_from_email
+      COGNITO_USER_POOL_ID = "us-east-1_uNLRWeBsi"
+      SES_FROM_EMAIL       = "fulfillmentAWS@gmail.com"
     }
   }
 
   tags = local.common_tags
 
-  depends_on = [
-    aws_iam_role_policy_attachment.notification_basic_execution,
-    aws_iam_role_policy_attachment.notification_lambda
-  ]
+  lifecycle {
+    ignore_changes = [
+      tags,
+      tags_all,
+      publish,
+      s3_bucket,
+      s3_key
+    ]
+  }
 }
 
 resource "aws_lambda_event_source_mapping" "notification_events_queue" {
-  event_source_arn        = aws_sqs_queue.notification_events_queue.arn
-  function_name           = aws_lambda_function.notification.arn
-  batch_size              = 10
-  function_response_types = ["ReportBatchItemFailures"]
+  event_source_arn = aws_sqs_queue.notification_events_queue.arn
+  function_name    = aws_lambda_function.notification.arn
+  batch_size       = 5
+
+  metrics_config {
+    metrics = ["EventCount"]
+  }
 }
