@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.api.commons;
+package com.fulfillment.warehouseservice.api.dto;
 
 import com.fulfillment.warehouseservice.domain.model.Warehouse;
 import java.time.Instant;

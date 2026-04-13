@@ -1,4 +1,4 @@
-package com.fulfillment.warehouseservice.api.commons;
+package com.fulfillment.warehouseservice.api.dto;
 
 public record CreateWarehouseRequest(
         String city,
