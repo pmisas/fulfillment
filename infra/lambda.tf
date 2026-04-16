@@ -79,9 +79,10 @@ resource "aws_lambda_function" "notification" {
 resource "aws_lambda_event_source_mapping" "notification_events_queue" {
   event_source_arn = aws_sqs_queue.notification_events_queue.arn
   function_name    = aws_lambda_function.notification.arn
+  enabled          = true
   batch_size       = 5
 
-  metrics_config {
-    metrics = ["EventCount"]
+  lifecycle {
+    ignore_changes = [metrics_config]
   }
 }
